@@ -4,40 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ninja Mastery 365</title>
-    <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=VT323&family=Inter:wght@400;900&display=swap" rel="stylesheet">
     <style>
         body { background-color: #050505; color: #e5e5e5; font-family: 'Inter', sans-serif; overflow-x: hidden; }
-        .ninja-card { background: #111; border: 1px solid #222; border-radius: 16px; transition: all 0.3s ease; }
+        .ninja-card { background: #111; border: 1px solid #222; border-radius: 16px; }
         .accent-green { color: #00ff88; }
-        .bg-accent { background-color: #00ff88; }
-        .rank-glow { text-shadow: 0 0 12px rgba(0, 255, 136, 0.7); font-family: 'VT323', monospace; }
-        .xp-bar-container { background: #000; border: 1px solid #333; height: 10px; border-radius: 5px; overflow: hidden; }
-        .xp-bar-fill { height: 100%; background: linear-gradient(90deg, #00ff88, #0088ff); transition: width 0.8s cubic-bezier(0.17, 0.67, 0.83, 0.67); }
-        .penalty-red { color: #ff4444; }
+        .rank-glow { text-shadow: 0 0 15px currentColor; font-family: 'VT323', monospace; }
+        .xp-bar-fill { height: 100%; background: linear-gradient(90deg, #00ff88, #0088ff); transition: width 1s ease; }
+        .mood-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(10px, 1fr)); gap: 3px; }
+        .mood-pixel { aspect-ratio: 1; border-radius: 2px; background: #1a1a1a; border: 1px solid #222; }
+        .penalty-red { color: #ff4444; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
     </style>
 </head>
 <body class="p-4 max-w-4xl mx-auto pb-10">
 
-    <audio id="slashSound" src="https://assets.mixkit.co/sfx/preview/mixkit-fast-sword-whoosh-1507.mp3" preload="auto"></audio>
-    <audio id="submitSound" src="https://assets.mixkit.co/sfx/preview/mixkit-medieval-fantasy-victory-2015.mp3" preload="auto"></audio>
-
     <header class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
             <h1 class="text-3xl font-black uppercase tracking-tighter">Ninja Protocol</h1>
-            <div class="flex items-center gap-3">
-                <p id="rankTitle" class="accent-green font-bold uppercase tracking-widest text-2xl rank-glow">Loading...</p>
-                <span id="streakCount" class="bg-orange-900/30 text-orange-400 px-3 py-1 rounded-full text-xs font-bold border border-orange-700/50">🔥 0 Days</span>
-            </div>
+            <p id="rankTitle" class="font-bold uppercase tracking-widest text-3xl rank-glow">Recruit</p>
         </div>
         <div class="w-full md:w-64">
-            <div class="flex justify-between text-[10px] uppercase font-black mb-1 tracking-widest text-gray-400">
-                <span>Mastery Progress</span>
-                <span id="xpText">0/0 XP</span>
+            <div class="flex justify-between text-[10px] uppercase font-black mb-1 text-gray-400">
+                <span>Total XP: <span id="totalXpDisplay">0</span></span>
+                <span id="xpText">Next Rank: 200</span>
             </div>
-            <div class="xp-bar-container">
+            <div class="h-3 w-full bg-black border border-gray-800 rounded-full overflow-hidden">
                 <div id="masteryBar" class="xp-bar-fill" style="width: 0%;"></div>
             </div>
         </div>
@@ -47,84 +41,61 @@
         
         <section class="ninja-card p-6 border-t-4 border-t-green-500">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-sm font-black text-gray-500 uppercase tracking-widest">The Protocol</h2>
-                <button onclick="toggleEditMode()" class="text-[10px] bg-gray-800 px-2 py-1 rounded hover:text-green-400 uppercase font-bold">Edit List</button>
+                <h2 class="text-xs font-black text-gray-500 uppercase tracking-widest">Protocol</h2>
+                <button onclick="toggleEditMode()" id="editBtn" class="text-[10px] bg-gray-800 px-2 py-1 rounded uppercase font-bold text-green-400">Edit Tasks</button>
             </div>
+
             <div id="editControls" class="hidden mb-4 space-y-2">
-                <input type="text" id="newTaskInput" placeholder="Add custom habit..." class="w-full bg-black border border-gray-700 p-2 rounded text-xs outline-none focus:border-green-500">
-                <button onclick="addTask()" class="w-full bg-green-900 text-green-400 text-[10px] font-bold py-1 rounded uppercase">Confirm Addition</button>
+                <input type="text" id="newTaskInput" placeholder="Add Task Name..." class="w-full bg-black border border-gray-700 p-2 rounded text-xs outline-none focus:border-green-500">
+                <button onclick="addTask()" class="w-full bg-green-900 text-green-400 text-[10px] font-bold py-1 rounded uppercase">Confirm Add</button>
             </div>
+
             <div id="habitList" class="space-y-3"></div>
         </section>
 
         <section class="ninja-card p-6 md:col-span-2 space-y-6">
             <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-[10px] text-gray-500 mb-1 uppercase font-black tracking-widest text-center">Screen Time (Limit: 3h)</label>
-                    <input type="number" id="screenTimeInput" step="0.1" placeholder="Hrs" class="w-full bg-black border border-gray-800 p-4 rounded-xl focus:border-green-500 outline-none text-2xl font-bold text-center">
-                    <p id="penaltyDisplay" class="text-[9px] text-center mt-1 uppercase font-bold"></p>
+                <div class="bg-black/40 rounded-xl p-4 border border-gray-800">
+                    <label class="block text-[10px] text-gray-500 mb-1 uppercase font-black text-center">Screen Time (1hr = -5xp)</label>
+                    <input type="number" id="screenTimeInput" step="1" value="0" class="w-full bg-transparent p-2 text-3xl font-bold text-center outline-none">
+                    <p id="penaltyDisplay" class="text-[9px] text-center mt-1 font-bold uppercase">Safe</p>
                 </div>
                 <div class="bg-black/40 rounded-xl p-4 border border-gray-800 text-center flex flex-col justify-center">
-                    <p class="text-[10px] text-gray-500 uppercase font-black">Est. XP Gain</p>
+                    <p class="text-[10px] text-gray-500 uppercase font-black">Score Impact</p>
                     <p id="liveScore" class="text-4xl font-black accent-green rank-glow">0</p>
                 </div>
             </div>
 
-            <button onclick="saveDailyLog()" class="w-full bg-accent text-black font-black py-5 rounded-2xl hover:brightness-110 active:scale-95 transition-all uppercase shadow-lg shadow-green-900/20 text-xl">
+            <button onclick="saveDailyLog()" class="w-full bg-[#00ff88] text-black font-black py-5 rounded-2xl transition-all uppercase text-xl shadow-lg active:scale-95">
                 Execute Daily Entry
             </button>
         </section>
 
         <section class="ninja-card p-6 md:col-span-3">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-sm font-black text-gray-500 uppercase tracking-widest">Combat Effectiveness (Last 7 Days)</h2>
-                <div class="flex gap-2">
-                     <span class="text-[10px] text-green-400 font-bold uppercase">Progress Tracker</span>
-                </div>
-            </div>
-            <div class="h-64"><canvas id="progressChart"></canvas></div>
+            <h2 class="text-xs font-black text-gray-500 uppercase tracking-widest mb-4">365 Day Spirit Scroll</h2>
+            <div id="moodGrid" class="mood-grid"></div>
         </section>
-
     </div>
 
     <script>
-        // --- DATABASE SETUP ---
-        let habits = JSON.parse(localStorage.getItem('ninjaHabits')) || ["Gym Training", "Reading", "Deep Work", "Meditation"];
+        let habits = JSON.parse(localStorage.getItem('ninjaHabits')) || ["Gym", "Reading", "Deep Work"];
         let history = JSON.parse(localStorage.getItem('ninjaHistory')) || [];
         let totalXP = JSON.parse(localStorage.getItem('ninjaXP')) || 0;
-        let editMode = false;
+        let isEditMode = false;
 
-        const slashSound = document.getElementById('slashSound');
-        const submitSound = document.getElementById('submitSound');
-
-        // --- LEVEL SYSTEM (The XP Logic) ---
-        // Every level takes progressively more XP
-        const getLevel = (xp) => Math.floor(0.1 * Math.sqrt(xp)) + 1;
-        const getXPForLevel = (lvl) => Math.pow((lvl) / 0.1, 2);
-
-        function updateLevelingUI() {
-            const currentLevel = getLevel(totalXP);
-            const nextLevelXP = Math.round(getXPForLevel(currentLevel + 1));
-            const prevLevelXP = Math.round(getXPForLevel(currentLevel));
-            
-            const progressInLevel = ((totalXP - prevLevelXP) / (nextLevelXP - prevLevelXP)) * 100;
-            
-            document.getElementById('rankTitle').innerText = `Level ${currentLevel} Ninja`;
-            document.getElementById('masteryBar').style.width = `${progressInLevel}%`;
-            document.getElementById('xpText').innerText = `${Math.round(totalXP)} / ${nextLevelXP} XP`;
-        }
-
-        // --- HABIT MANAGEMENT ---
         function toggleEditMode() {
-            editMode = !editMode;
+            isEditMode = !isEditMode;
             document.getElementById('editControls').classList.toggle('hidden');
+            document.getElementById('editBtn').innerText = isEditMode ? "Done Editing" : "Edit Tasks";
+            document.getElementById('editBtn').classList.toggle('bg-red-900');
             renderHabits();
         }
 
         function addTask() {
             const input = document.getElementById('newTaskInput');
-            if (input.value.trim()) {
-                habits.push(input.value.trim());
+            const val = input.value.trim();
+            if (val) {
+                habits.push(val);
                 localStorage.setItem('ninjaHabits', JSON.stringify(habits));
                 input.value = "";
                 renderHabits();
@@ -139,108 +110,87 @@
 
         function renderHabits() {
             const container = document.getElementById('habitList');
-            container.innerHTML = "";
-            habits.forEach((h, i) => {
-                container.innerHTML += `
-                    <div class="flex items-center justify-between bg-black/50 p-4 rounded-xl border border-gray-900">
-                        <span class="text-xs font-black uppercase tracking-widest">${h}</span>
-                        <div>
-                            ${editMode ? 
-                                `<button onclick="deleteTask(${i})" class="text-red-500 font-bold px-2">REMOVE</button>` : 
-                                `<input type="checkbox" onchange="calculateLiveScore(); slashSound.play()" class="habit-check w-6 h-6 accent-green-500 cursor-pointer">`}
-                        </div>
-                    </div>`;
-            });
-            calculateLiveScore();
+            container.innerHTML = habits.map((h, i) => `
+                <div class="flex items-center justify-between bg-black/50 p-3 rounded-xl border border-gray-900">
+                    <span class="text-xs font-bold uppercase tracking-widest">${h}</span>
+                    ${isEditMode ? 
+                        `<button onclick="deleteTask(${i})" class="text-red-500 font-bold text-xs px-2">DELETE</button>` : 
+                        `<input type="checkbox" id="check-${i}" onchange="calculateScore()" class="habit-check w-6 h-6 accent-green-500">`
+                    }
+                </div>`).join('');
+            calculateScore();
         }
 
-        // --- CALCULATION LOGIC ---
-        function calculateLiveScore() {
+        function calculateScore() {
             const screenTime = parseFloat(document.getElementById('screenTimeInput').value) || 0;
-            const checks = document.querySelectorAll('.habit-check:checked').length;
+            const checkedCount = document.querySelectorAll('.habit-check:checked').length;
             
-            let baseXP = habits.length > 0 ? (checks / habits.length) * 100 : 0;
-            
-            // Screen Time Penalty Logic
-            let penalty = 0;
-            if (screenTime > 3) {
-                penalty = (screenTime - 3) * 25; // 25 XP penalty per hour over 3
-                document.getElementById('penaltyDisplay').innerText = `Penalty: -${Math.round(penalty)} XP`;
-                document.getElementById('penaltyDisplay').className = "text-[9px] text-center mt-1 uppercase font-bold penalty-red";
-            } else {
-                document.getElementById('penaltyDisplay').innerText = "Safe Zone";
-                document.getElementById('penaltyDisplay').className = "text-[9px] text-center mt-1 uppercase font-bold text-green-600";
-            }
+            // Gain 20 per habit
+            let gain = checkedCount * 20;
 
-            const finalDailyXP = Math.max(0, Math.round(baseXP - penalty));
-            document.getElementById('liveScore').innerText = finalDailyXP;
-            return finalDailyXP;
+            // Laziness Penalty (-5 if 0 habits checked)
+            if (checkedCount === 0 && habits.length > 0) gain = -5;
+
+            // Screen Penalty (-5 per hour)
+            let screenPenalty = screenTime * 5;
+            
+            let finalDailyScore = gain - screenPenalty;
+
+            const scoreDisplay = document.getElementById('liveScore');
+            scoreDisplay.innerText = (finalDailyScore > 0 ? "+" : "") + finalDailyScore;
+            scoreDisplay.style.color = finalDailyScore >= 0 ? "#00ff88" : "#ff4444";
+
+            document.getElementById('penaltyDisplay').innerText = screenPenalty > 0 ? `-${screenPenalty} XP SCREEN TIME` : "SAFE";
+            document.getElementById('penaltyDisplay').className = screenPenalty > 0 ? "text-[9px] text-center mt-1 font-bold penalty-red" : "text-[9px] text-center mt-1 font-bold text-green-600";
+
+            return finalDailyScore;
+        }
+
+        function updateLevelingUI() {
+            let rank = "Recruit", color = "#9ca3af", nextXP = 200;
+            if (totalXP >= 5000) { rank = "Shadow Master"; color = "#facc15"; nextXP = 10000; }
+            else if (totalXP >= 2000) { rank = "Elite Chunin"; color = "#a855f7"; nextXP = 5000; }
+            else if (totalXP >= 800) { rank = "Chunin"; color = "#3b82f6"; nextXP = 2000; }
+            else if (totalXP >= 200) { rank = "Genin"; color = "#00ff88"; nextXP = 800; }
+
+            document.getElementById('rankTitle').innerText = rank;
+            document.getElementById('rankTitle').style.color = color;
+            document.getElementById('totalXpDisplay').innerText = Math.round(totalXP);
+            document.getElementById('masteryBar').style.width = `${Math.min((totalXP / nextXP) * 100, 100)}%`;
+            document.getElementById('xpText').innerText = `Next Rank: ${nextXP}`;
         }
 
         function saveDailyLog() {
-            const finalScore = calculateLiveScore();
-            const screenTime = parseFloat(document.getElementById('screenTimeInput').value) || 0;
+            const dailyScore = calculateScore();
+            totalXP += dailyScore;
+            if (totalXP < 0) totalXP = 0;
             
-            totalXP += finalScore;
             localStorage.setItem('ninjaXP', JSON.stringify(totalXP));
-            
-            const entry = {
-                date: new Date().toLocaleDateString('en-US', { weekday: 'short' }),
-                score: finalScore
-            };
-            
-            history.push(entry);
+            history.push({ date: new Date().toLocaleDateString(), score: dailyScore });
             localStorage.setItem('ninjaHistory', JSON.stringify(history));
             
-            submitSound.play();
-            updateDashboard();
-            alert(`Mission Accomplished. +${finalScore} XP`);
-        }
-
-        // --- CHART & UI UPDATES ---
-        function updateDashboard() {
-            updateLevelingUI();
-            document.getElementById('streakCount').innerText = `🔥 ${history.length} Day Streak`;
-
-            const ctx = document.getElementById('progressChart').getContext('2d');
-            if (window.myChart) window.myChart.destroy();
+            if (dailyScore > 0) confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
             
-            window.myChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: history.map(h => h.date).slice(-7),
-                    datasets: [{
-                        label: 'Daily XP',
-                        data: history.map(h => h.score).slice(-7),
-                        borderColor: '#00ff88',
-                        backgroundColor: 'rgba(0, 255, 136, 0.1)',
-                        borderWidth: 4,
-                        fill: true,
-                        tension: 0.4,
-                        pointBackgroundColor: '#00ff88'
-                    }]
-                },
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false,
-                    scales: { 
-                        y: { beginAtZero: true, max: 120, grid: { color: '#222' }, ticks: { color: '#555' } },
-                        x: { grid: { display: false }, ticks: { color: '#555' } }
-                    },
-                    plugins: { legend: { display: false } }
-                }
-            });
+            updateLevelingUI();
+            renderMoodGrid();
+            alert(`Log Saved! Change: ${dailyScore} XP`);
         }
 
-        // Listen for screen time changes to update score live
-        document.getElementById('screenTimeInput').addEventListener('input', calculateLiveScore);
-
-        // --- PWA SERVICE WORKER REGISTRATION ---
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').catch(err => console.log("SW error", err));
+        function renderMoodGrid() {
+            const grid = document.getElementById('moodGrid');
+            grid.innerHTML = "";
+            for (let i = 0; i < 365; i++) {
+                const pixel = document.createElement('div');
+                pixel.className = 'mood-pixel';
+                if (history[i]) pixel.style.background = history[i].score > 0 ? "#00ff88" : "#ff4444";
+                grid.appendChild(pixel);
+            }
         }
+
+        document.getElementById('screenTimeInput').addEventListener('input', calculateScore);
         renderHabits();
-        updateDashboard();
+        updateLevelingUI();
+        renderMoodGrid();
     </script>
 </body>
 </html>
