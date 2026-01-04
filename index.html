@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ninja Mastery 365</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Inter:wght@400;900&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #050505; color: #e5e5e5; font-family: 'Inter', sans-serif; overflow-x: hidden; touch-action: manipulation; }
+        .ninja-card { background: #111; border: 1px solid #222; border-radius: 16px; position: relative; }
+        .accent-green { color: #00ff88; }
+        .rank-glow { text-shadow: 0 0 15px currentColor; font-family: 'VT323', monospace; }
+        .xp-bar-fill { height: 100%; background: linear-gradient(90deg, #00ff88, #0088ff); transition: width 1s ease; }
+        
+        #splash {
+            position: fixed; inset: 0; background: #000; z-index: 200;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 1.5s ease;
+        }
+        .sword-icon { font-size: 80px; filter: drop-shadow(0 0 20px #00ff88); animation: slash 1s ease-out; }
+        @keyframes slash { 0% { transform: scale(0) rotate(-45deg); opacity: 0; } 100% { transform: scale(1) rotate(0deg); opacity: 1; } }
+
+        .boss-area { border: 2px solid #ef4444; background: linear-gradient(to bottom, #200, #111); }
+        .monster-glow { filter: drop-shadow(0 0 10px #ef4444); font-size: 50px; }
+        .history-scroll::-webkit-scrollbar { width: 4px; }
+        .history-scroll::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+    </style>
+</head>
+<body class="p-4 max-w-4xl mx-auto pb-10">
+
+    <div id="splash">
+        <div class="sword-icon">⚔️</div>
+        <h2 class="mt-4 font-black tracking-[10px] uppercase text-xl accent-green">Protocol 365</h2>
+    </div>
+
+    <header class="mb-8 flex flex-col md:row justify-between items-start md:items-center gap-4">
+        <div>
+            <h1 class="text-3xl font-black uppercase tracking-tighter">Ninja Protocol</h1>
+            <p id="rankTitle" class="font-bold uppercase tracking-widest text-3xl rank-glow">Recruit</p>
+        </div>
+        <div class="w-full md:w-64">
+            <div class="flex justify-between text-[10px] uppercase font-black mb-1 text-gray-400">
+                <span>Total XP: <span id="totalXpDisplay">0</span></span>
+                <span>Max 100/Day</span>
+            </div>
+            <div class="h-3 w-full bg-black border border-gray-800 rounded-full overflow-hidden">
+                <div id="masteryBar" class="xp-bar-fill" style="width: 0%;"></div>
+            </div>
+        </div>
+    </header>
+
+    <div id="bossSection" class="hidden mb-8 ninja-card boss-area p-6 text-center animate-pulse">
+        <h2 class="text-red-500 font-black uppercase tracking-tighter text-2xl mb-2">Weekend Shogun Appears!</h2>
+        <div class="monster-glow">👹</div>
+        <p class="text-xs text-gray-400 mt-2">Required Victory Score: <span id="bossReq">650</span></p>
+        <p class="text-[10px] uppercase font-bold text-yellow-500">Reward: 1 Day Holiday | Penalty: No Rest</p>
+    </div>
+
+    <div class="mb-6 bg-blue-900/20 border border-blue-800 p-3 rounded-xl flex justify-between items-center">
+        <span class="text-xs font-bold uppercase tracking-widest text-blue-400">🧠 Mental Health Streak</span>
+        <span class="text-xl font-black" id="moodStreak">0 / 25 Days</span>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <section class="ninja-card p-6 border-t-4 border-t-green-500">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xs font-black text-gray-500 uppercase tracking-widest">Protocol</h2>
+                <button onclick="toggleEditMode()" class="text-[10px] bg-gray-800 px-2 py-1 rounded uppercase font-bold text-green-400">Edit</button>
+            </div>
+            <div id="editControls" class="hidden mb-4 space-y-2">
+                <input type="text" id="newTaskInput" placeholder="New Task..." class="w-full bg-black border border-gray-700 p-2 rounded text-xs text-white">
+                <button onclick="addTask()" class="w-full bg-green-900 text-green-400 text-[10px] font-bold py-1 rounded uppercase">Confirm</button>
+            </div>
+            <div id="habitList" class="space-y-3"></div>
+        </section>
+
+        <section class="ninja-card p-6 md:col-span-2 space-y-6">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-black/40 rounded-xl p-4 border border-gray-800 text-center">
+                    <label class="block text-[10px] text-gray-500 mb-1 uppercase font-black">Screen Time (4h Safe)</label>
+                    <input type="number" id="screenTimeInput" value="0" class="w-full bg-transparent p-2 text-3xl font-bold text-center outline-none text-white">
+                </div>
+                <div class="bg-black/40 rounded-xl p-4 border border-gray-800 text-center">
+                    <p class="text-[10px] text-gray-500 uppercase font-black">Spirit (Mood)</p>
+                    <select id="moodSelect" class="bg-transparent text-2xl mt-2 outline-none text-white appearance-none">
+                        <option value="good" class="bg-black">🔥 Great</option>
+                        <option value="ok" class="bg-black">😐 Okay</option>
+                        <option value="bad" class="bg-black">😞 Bad</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="text-center bg-black/60 p-4 rounded-xl border border-gray-900">
+                <p class="text-[10px] text-gray-500 uppercase">Impact</p>
+                <p id="liveScore" class="text-4xl font-black accent-green">0</p>
+                <p id="penaltyInfo" class="text-[9px] font-bold uppercase mt-1"></p>
+            </div>
+
+            <button onclick="saveDailyLog()" class="w-full bg-[#00ff88] text-black font-black py-5 rounded-2xl transition-all uppercase text-xl shadow-lg active:scale-95">
+                Execute Entry
+            </button>
+        </section>
+
+        <section class="ninja-card p-6 md:col-span-3">
+            <h2 class="text-xs font-black text-gray-500 uppercase tracking-widest mb-4">Scroll of History</h2>
+            <div id="historyLog" class="history-scroll space-y-2 max-h-48 overflow-y-auto pr-2 text-white"></div>
+        </section>
+    </div>
+
+    <script>
+        let habits = JSON.parse(localStorage.getItem('ninjaHabits')) || ["Gym", "Reading", "Deep Work"];
+        let history = JSON.parse(localStorage.getItem('ninjaHistory')) || [];
+        let totalXP = JSON.parse(localStorage.getItem('ninjaXP')) || 0;
+        let goodMoodCount = JSON.parse(localStorage.getItem('goodMoodCount')) || 0;
+        let isEditMode = false;
+
+        setTimeout(() => {
+            document.getElementById('splash').style.opacity = '0';
+            setTimeout(() => document.getElementById('splash').style.display = 'none', 1500);
+        }, 2000);
+
+        function checkWeekendBoss() {
+            const day = new Date().getDay();
+            if (day === 0 || day === 6) {
+                document.getElementById('bossSection').classList.remove('hidden');
+                let difficulty = 650;
+                if (totalXP > 1000) difficulty = 800;
+                if (totalXP > 3000) difficulty = 1000;
+                document.getElementById('bossReq').innerText = difficulty;
+            }
+        }
+
+        function calculateScore() {
+            const screenTime = parseFloat(document.getElementById('screenTimeInput').value) || 0;
+            const checkedCount = document.querySelectorAll('.habit-check:checked').length;
+            let gain = checkedCount * 20;
+            if (checkedCount === 0 && habits.length > 0) gain = -5;
+            let screenPenalty = screenTime > 4 ? (screenTime - 4) * 10 : 0;
+            let finalDailyScore = gain - screenPenalty;
+            if (finalDailyScore > 100) finalDailyScore = 100;
+            document.getElementById('liveScore').innerText = (finalDailyScore > 0 ? "+" : "") + Math.round(finalDailyScore);
+            document.getElementById('penaltyInfo').innerText = screenTime > 4 ? `-${Math.round(screenPenalty)} XP` : "Safe Zone";
+            document.getElementById('penaltyInfo').style.color = screenTime > 4 ? "#ef4444" : "#00ff88";
+            return Math.round(finalDailyScore);
+        }
+
+        function saveDailyLog() {
+            const dailyScore = calculateScore();
+            const mood = document.getElementById('moodSelect').value;
+            const today = new Date().toLocaleDateString();
+            if (history.some(h => h.date === today)) { alert("Protocol already executed."); return; }
+            if (mood === 'good') { goodMoodCount++; localStorage.setItem('goodMoodCount', goodMoodCount); }
+            const day = new Date().getDay();
+            if (day === 0 || day === 6) {
+                const req = parseInt(document.getElementById('bossReq').innerText);
+                if (dailyScore * 10 >= req) { alert("SHOGUN DEFEATED!"); confetti({ particleCount: 200, spread: 100 }); }
+            }
+            totalXP += dailyScore;
+            if (totalXP < 0) totalXP = 0;
+            history.unshift({ date: today, score: dailyScore, mood: mood });
+            localStorage.setItem('ninjaXP', JSON.stringify(totalXP));
+            localStorage.setItem('ninjaHistory', JSON.stringify(history));
+            updateUI(); renderHistory();
+            alert(`Saved: ${dailyScore} XP`);
+        }
+
+        function renderHistory() {
+            document.getElementById('historyLog').innerHTML = history.map(h => `
+                <div class="flex justify-between bg-black/40 p-3 rounded-lg border border-gray-800 text-[10px]">
+                    <span class="text-gray-500">${h.date}</span>
+                    <span class="font-black ${h.score >= 0 ? 'text-green-400' : 'text-red-500'}">${h.score > 0 ? '+' : ''}${h.score} XP</span>
+                    <span>${h.mood === 'good' ? '🔥' : h.mood === 'ok' ? '😐' : '😞'}</span>
+                </div>`).join('');
+        }
+
+        function updateUI() {
+            document.getElementById('totalXpDisplay').innerText = Math.round(totalXP);
+            document.getElementById('moodStreak').innerText = `${goodMoodCount} / 25 Days`;
+            let r = "Recruit", c = "#9ca3af", nx = 200;
+            if (totalXP >= 5000) { r = "Shadow Master"; c = "#facc15"; nx = 10000; }
+            else if (totalXP >= 800) { r = "Chunin"; c = "#3b82f6"; nx = 2000; }
+            else if (totalXP >= 200) { r = "Genin"; c = "#00ff88"; nx = 800; }
+            document.getElementById('rankTitle').innerText = r;
+            document.getElementById('rankTitle').style.color = c;
+            document.getElementById('masteryBar').style.width = `${Math.min((totalXP / nx) * 100, 100)}%`;
+        }
+
+        function renderHabits() {
+            document.getElementById('habitList').innerHTML = habits.map((h, i) => `
+                <div class="flex items-center justify-between bg-black/50 p-3 rounded-xl border border-gray-900">
+                    <span class="text-xs font-bold uppercase tracking-widest text-white">${h}</span>
+                    <input type="checkbox" onchange="calculateScore()" class="habit-check w-6 h-6 accent-green-500">
+                </div>`).join('');
+        }
+
+        function toggleEditMode() { isEditMode = !isEditMode; document.getElementById('editControls').classList.toggle('hidden'); }
+        function addTask() {
+            const val = document.getElementById('newTaskInput').value;
+            if(val) { habits.push(val); localStorage.setItem('ninjaHabits', JSON.stringify(habits)); renderHabits(); document.getElementById('newTaskInput').value=""; }
+        }
+
+        document.getElementById('screenTimeInput').addEventListener('input', calculateScore);
+        renderHabits(); updateUI(); renderHistory(); checkWeekendBoss();
+    </script>
+</body>
+</html>
