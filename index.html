@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ninja Mastery 365</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=VT323&family=Inter:wght@400;900&display=swap" rel="stylesheet">
     <style>
-        body { background-color: #050505; color: #e5e5e5; font-family: 'Inter', sans-serif; overflow-x: hidden; touch-action: manipulation; }
+        body { background-color: #050505; color: #e5e5e5; font-family: 'Inter', sans-serif; overflow-x: hidden; }
         .ninja-card { background: #111; border: 1px solid #222; border-radius: 16px; position: relative; }
         .accent-green { color: #00ff88; }
         .rank-glow { text-shadow: 0 0 15px currentColor; font-family: 'VT323', monospace; }
@@ -25,6 +25,7 @@
         .boss-area { border: 2px solid #ef4444; background: linear-gradient(to bottom, #200, #111); }
         .monster-glow { filter: drop-shadow(0 0 10px #ef4444); font-size: 50px; }
         .history-scroll::-webkit-scrollbar { width: 4px; }
+        .history-scroll::-webkit-scrollbar-track { background: #000; }
         .history-scroll::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
     </style>
 </head>
@@ -35,7 +36,7 @@
         <h2 class="mt-4 font-black tracking-[10px] uppercase text-xl accent-green">Protocol 365</h2>
     </div>
 
-    <header class="mb-8 flex flex-col md:row justify-between items-start md:items-center gap-4">
+    <header class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
             <h1 class="text-3xl font-black uppercase tracking-tighter">Ninja Protocol</h1>
             <p id="rankTitle" class="font-bold uppercase tracking-widest text-3xl rank-glow">Recruit</p>
@@ -71,7 +72,7 @@
             </div>
             <div id="editControls" class="hidden mb-4 space-y-2">
                 <input type="text" id="newTaskInput" placeholder="New Task..." class="w-full bg-black border border-gray-700 p-2 rounded text-xs text-white">
-                <button onclick="addTask()" class="w-full bg-green-900 text-green-400 text-[10px] font-bold py-1 rounded uppercase">Confirm</button>
+                <button onclick="addTask()" class="w-full bg-green-900 text-green-400 text-[10px] font-bold py-1 rounded">Confirm</button>
             </div>
             <div id="habitList" class="space-y-3"></div>
         </section>
@@ -84,7 +85,7 @@
                 </div>
                 <div class="bg-black/40 rounded-xl p-4 border border-gray-800 text-center">
                     <p class="text-[10px] text-gray-500 uppercase font-black">Spirit (Mood)</p>
-                    <select id="moodSelect" class="bg-transparent text-2xl mt-2 outline-none text-white appearance-none">
+                    <select id="moodSelect" class="bg-transparent text-2xl mt-2 outline-none text-white">
                         <option value="good" class="bg-black">🔥 Great</option>
                         <option value="ok" class="bg-black">😐 Okay</option>
                         <option value="bad" class="bg-black">😞 Bad</option>
@@ -93,7 +94,6 @@
             </div>
             
             <div class="text-center bg-black/60 p-4 rounded-xl border border-gray-900">
-                <p class="text-[10px] text-gray-500 uppercase">Impact</p>
                 <p id="liveScore" class="text-4xl font-black accent-green">0</p>
                 <p id="penaltyInfo" class="text-[9px] font-bold uppercase mt-1"></p>
             </div>
@@ -105,8 +105,14 @@
 
         <section class="ninja-card p-6 md:col-span-3">
             <h2 class="text-xs font-black text-gray-500 uppercase tracking-widest mb-4">Scroll of History</h2>
-            <div id="historyLog" class="history-scroll space-y-2 max-h-48 overflow-y-auto pr-2 text-white"></div>
+            <div id="historyLog" class="history-scroll space-y-2 max-h-48 overflow-y-auto pr-2"></div>
         </section>
+    </div>
+
+    <div class="mt-12 text-center pb-10">
+        <button onclick="resetJourney()" class="text-[10px] text-gray-700 hover:text-red-600 font-bold uppercase tracking-[3px] transition-all duration-300">
+            ⚔️ End This Journey & Restart ⚔️
+        </button>
     </div>
 
     <script>
@@ -120,6 +126,17 @@
             document.getElementById('splash').style.opacity = '0';
             setTimeout(() => document.getElementById('splash').style.display = 'none', 1500);
         }, 2000);
+
+        function resetJourney() {
+            const firstCheck = confirm("DANGER: This will wipe your history and XP back to zero. Proceed?");
+            if (firstCheck) {
+                const secondCheck = confirm("FINAL WARNING: Are you truly ready to start your journey from nothing?");
+                if (secondCheck) {
+                    localStorage.clear();
+                    location.reload();
+                }
+            }
+        }
 
         function checkWeekendBoss() {
             const day = new Date().getDay();
@@ -140,8 +157,9 @@
             let screenPenalty = screenTime > 4 ? (screenTime - 4) * 10 : 0;
             let finalDailyScore = gain - screenPenalty;
             if (finalDailyScore > 100) finalDailyScore = 100;
+
             document.getElementById('liveScore').innerText = (finalDailyScore > 0 ? "+" : "") + Math.round(finalDailyScore);
-            document.getElementById('penaltyInfo').innerText = screenTime > 4 ? `-${Math.round(screenPenalty)} XP` : "Safe Zone";
+            document.getElementById('penaltyInfo').innerText = screenTime > 4 ? `Penalty: -${Math.round(screenPenalty)} XP` : "Safe Zone Active";
             document.getElementById('penaltyInfo').style.color = screenTime > 4 ? "#ef4444" : "#00ff88";
             return Math.round(finalDailyScore);
         }
@@ -150,41 +168,61 @@
             const dailyScore = calculateScore();
             const mood = document.getElementById('moodSelect').value;
             const today = new Date().toLocaleDateString();
-            if (history.some(h => h.date === today)) { alert("Protocol already executed."); return; }
-            if (mood === 'good') { goodMoodCount++; localStorage.setItem('goodMoodCount', goodMoodCount); }
+
+            if (history.some(h => h.date === today)) {
+                alert("Protocol already executed for today.");
+                return;
+            }
+
+            if (mood === 'good') {
+                goodMoodCount++;
+                localStorage.setItem('goodMoodCount', goodMoodCount);
+            }
+
             const day = new Date().getDay();
             if (day === 0 || day === 6) {
                 const req = parseInt(document.getElementById('bossReq').innerText);
-                if (dailyScore * 10 >= req) { alert("SHOGUN DEFEATED!"); confetti({ particleCount: 200, spread: 100 }); }
+                if (dailyScore * 10 >= req) {
+                    alert("SHOGUN DEFEATED!");
+                    confetti({ particleCount: 200, spread: 100 });
+                }
             }
+
             totalXP += dailyScore;
             if (totalXP < 0) totalXP = 0;
+            
             history.unshift({ date: today, score: dailyScore, mood: mood });
             localStorage.setItem('ninjaXP', JSON.stringify(totalXP));
             localStorage.setItem('ninjaHistory', JSON.stringify(history));
-            updateUI(); renderHistory();
-            alert(`Saved: ${dailyScore} XP`);
+            
+            updateUI();
+            renderHistory();
+            alert(`Saved! XP: ${dailyScore}`);
         }
 
         function renderHistory() {
-            document.getElementById('historyLog').innerHTML = history.map(h => `
-                <div class="flex justify-between bg-black/40 p-3 rounded-lg border border-gray-800 text-[10px]">
-                    <span class="text-gray-500">${h.date}</span>
-                    <span class="font-black ${h.score >= 0 ? 'text-green-400' : 'text-red-500'}">${h.score > 0 ? '+' : ''}${h.score} XP</span>
-                    <span>${h.mood === 'good' ? '🔥' : h.mood === 'ok' ? '😐' : '😞'}</span>
-                </div>`).join('');
+            const log = document.getElementById('historyLog');
+            log.innerHTML = history.map(h => `
+                <div class="flex justify-between items-center bg-black/40 p-3 rounded-lg border border-gray-800 text-[10px]">
+                    <span class="text-gray-500 font-bold">${h.date}</span>
+                    <span class="font-black uppercase tracking-widest ${h.score >= 0 ? 'text-green-400' : 'text-red-500'}">
+                        ${h.score > 0 ? '+' : ''}${h.score} XP
+                    </span>
+                    <span class="text-lg">${h.mood === 'good' ? '🔥' : h.mood === 'ok' ? '😐' : '😞'}</span>
+                </div>
+            `).join('');
         }
 
         function updateUI() {
             document.getElementById('totalXpDisplay').innerText = Math.round(totalXP);
             document.getElementById('moodStreak').innerText = `${goodMoodCount} / 25 Days`;
-            let r = "Recruit", c = "#9ca3af", nx = 200;
-            if (totalXP >= 5000) { r = "Shadow Master"; c = "#facc15"; nx = 10000; }
-            else if (totalXP >= 800) { r = "Chunin"; c = "#3b82f6"; nx = 2000; }
-            else if (totalXP >= 200) { r = "Genin"; c = "#00ff88"; nx = 800; }
-            document.getElementById('rankTitle').innerText = r;
-            document.getElementById('rankTitle').style.color = c;
-            document.getElementById('masteryBar').style.width = `${Math.min((totalXP / nx) * 100, 100)}%`;
+            let rank = "Recruit", color = "#9ca3af", nextXP = 200;
+            if (totalXP >= 5000) { rank = "Shadow Master"; color = "#facc15"; nextXP = 10000; }
+            else if (totalXP >= 800) { rank = "Chunin"; color = "#3b82f6"; nextXP = 2000; }
+            else if (totalXP >= 200) { rank = "Genin"; color = "#00ff88"; nextXP = 800; }
+            document.getElementById('rankTitle').innerText = rank;
+            document.getElementById('rankTitle').style.color = color;
+            document.getElementById('masteryBar').style.width = `${Math.min((totalXP / nextXP) * 100, 100)}%`;
         }
 
         function renderHabits() {
@@ -198,11 +236,29 @@
         function toggleEditMode() { isEditMode = !isEditMode; document.getElementById('editControls').classList.toggle('hidden'); }
         function addTask() {
             const val = document.getElementById('newTaskInput').value;
-            if(val) { habits.push(val); localStorage.setItem('ninjaHabits', JSON.stringify(habits)); renderHabits(); document.getElementById('newTaskInput').value=""; }
+            if(val) { habits.push(val); localStorage.setItem('ninjaHabits', JSON.stringify(habits)); renderHabits(); document.getElementById('newTaskInput').value = "";}
         }
 
         document.getElementById('screenTimeInput').addEventListener('input', calculateScore);
-        renderHabits(); updateUI(); renderHistory(); checkWeekendBoss();
+        renderHabits();
+        updateUI();
+        renderHistory();
+        checkWeekendBoss();
     </script>
 </body>
 </html>
+<div class="mt-10 text-center">
+    <button onclick="resetJourney()" class="text-[10px] text-red-900 font-bold uppercase tracking-widest hover:text-red-500 transition-colors">
+        ⚠️ Reset All Data & Restart Journey
+    </button>
+</div>
+
+<script>
+    function resetJourney() {
+        if (confirm("Are you sure? This will delete all your XP, History, and Ranks forever. You will start as a Recruit again.")) {
+            localStorage.clear();
+            location.reload();
+        }
+    }
+    // ... rest of your existing script functions ...
+</script>
