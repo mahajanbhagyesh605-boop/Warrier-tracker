@@ -3,48 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ninja Mastery 365</title>
+    <title>Ninja Mastery: Akatsuki Rush</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=VT323&family=Inter:wght@400;900&display=swap" rel="stylesheet">
     <style>
-        body { background-color: #050505; color: #e5e5e5; font-family: 'Inter', sans-serif; overflow-x: hidden; }
-        .ninja-card { background: #111; border: 1px solid #222; border-radius: 16px; position: relative; }
+        body { background-color: #050505; color: #e5e5e5; font-family: 'Inter', sans-serif; }
+        .ninja-card { background: #111; border: 1px solid #222; border-radius: 16px; }
         .accent-green { color: #00ff88; }
         .rank-glow { text-shadow: 0 0 15px currentColor; font-family: 'VT323', monospace; }
-        .xp-bar-fill { height: 100%; background: linear-gradient(90deg, #00ff88, #0088ff); transition: width 1s ease; }
+        .xp-bar-fill { height: 100%; background: linear-gradient(90deg, #ff0000, #b91c1c); transition: width 1s ease; }
         
         #splash {
             position: fixed; inset: 0; background: #000; z-index: 200;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             transition: opacity 1.5s ease;
         }
-        .sword-icon { font-size: 80px; filter: drop-shadow(0 0 20px #00ff88); animation: slash 1s ease-out; }
-        @keyframes slash { 0% { transform: scale(0) rotate(-45deg); opacity: 0; } 100% { transform: scale(1) rotate(0deg); opacity: 1; } }
+        
+        .boss-active { border: 2px solid #ef4444; background: linear-gradient(to bottom, #300, #111); animation: shake 0.5s infinite; }
+        @keyframes shake { 0% { transform: translate(1px, 1px); } 10% { transform: translate(-1px, -2px); } 100% { transform: translate(1px, 1px); } }
 
-        .boss-area { border: 2px solid #ef4444; background: linear-gradient(to bottom, #200, #111); }
-        .monster-glow { filter: drop-shadow(0 0 10px #ef4444); font-size: 50px; }
-        .history-scroll::-webkit-scrollbar { width: 4px; }
-        .history-scroll::-webkit-scrollbar-track { background: #000; }
-        .history-scroll::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        /* Video Container */
+        #videoOverlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 300;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+        }
     </style>
 </head>
-<body class="p-4 max-w-4xl mx-auto pb-10">
+<body class="p-4 max-w-4xl mx-auto pb-20">
 
-    <div id="splash">
-        <div class="sword-icon">⚔️</div>
-        <h2 class="mt-4 font-black tracking-[10px] uppercase text-xl accent-green">Protocol 365</h2>
+    <div id="videoOverlay">
+        <div class="w-full max-w-2xl aspect-video bg-black">
+            <iframe id="battleVideo" class="w-full h-full" src="" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+        </div>
+        <button onclick="closeVideo()" class="mt-6 px-8 py-3 bg-red-600 font-bold uppercase rounded-full">Return to Sanctuary</button>
     </div>
 
-    <header class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div id="splash">
+        <div class="text-6xl mb-4">☁️</div>
+        <h2 class="font-black tracking-[10px] uppercase text-xl text-red-600">Akatsuki Rising</h2>
+    </div>
+
+    <header class="mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
             <h1 class="text-3xl font-black uppercase tracking-tighter">Ninja Protocol</h1>
             <p id="rankTitle" class="font-bold uppercase tracking-widest text-3xl rank-glow">Recruit</p>
         </div>
         <div class="w-full md:w-64">
-            <div class="flex justify-between text-[10px] uppercase font-black mb-1 text-gray-400">
-                <span>Total XP: <span id="totalXpDisplay">0</span></span>
-                <span>Max 100/Day</span>
+            <div class="flex justify-between text-[10px] uppercase font-black mb-1">
+                <span class="text-red-500">Total XP: <span id="totalXpDisplay">0</span></span>
+                <span class="text-gray-500">Level Progress</span>
             </div>
             <div class="h-3 w-full bg-black border border-gray-800 rounded-full overflow-hidden">
                 <div id="masteryBar" class="xp-bar-fill" style="width: 0%;"></div>
@@ -52,213 +60,165 @@
         </div>
     </header>
 
-    <div id="bossSection" class="hidden mb-8 ninja-card boss-area p-6 text-center animate-pulse">
-        <h2 class="text-red-500 font-black uppercase tracking-tighter text-2xl mb-2">Weekend Shogun Appears!</h2>
-        <div class="monster-glow">👹</div>
-        <p class="text-xs text-gray-400 mt-2">Required Victory Score: <span id="bossReq">650</span></p>
-        <p class="text-[10px] uppercase font-bold text-yellow-500">Reward: 1 Day Holiday | Penalty: No Rest</p>
-    </div>
-
-    <div class="mb-6 bg-blue-900/20 border border-blue-800 p-3 rounded-xl flex justify-between items-center">
-        <span class="text-xs font-bold uppercase tracking-widest text-blue-400">🧠 Mental Health Streak</span>
-        <span class="text-xl font-black" id="moodStreak">0 / 25 Days</span>
+    <div id="bossSection" class="hidden mb-8 ninja-card p-6 text-center">
+        <h2 id="bossName" class="text-red-500 font-black uppercase tracking-widest text-2xl mb-2"></h2>
+        <div id="bossImage" class="text-6xl my-4"></div>
+        <div id="battleControls" class="space-y-4">
+            <p class="text-xs text-gray-400">Required XP to Slay: <span id="bossReq" class="text-white font-bold"></span></p>
+            <div id="victoryActions" class="hidden">
+                <button onclick="playBattle()" class="bg-yellow-600 text-black font-black px-6 py-2 rounded-full uppercase text-sm animate-bounce">
+                    ⚡ Watch Battle Fight ⚡
+                </button>
+                <p class="text-green-500 text-[10px] font-bold mt-2 uppercase">Reward: Sunday Rest Unlocked</p>
+            </div>
+            <div id="defeatWarning" class="text-red-600 text-[10px] font-bold uppercase animate-pulse">
+                Current XP too low! If you lose, no rest on Sunday.
+            </div>
+        </div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <section class="ninja-card p-6 border-t-4 border-t-green-500">
+        <section class="ninja-card p-6 border-t-4 border-t-red-600">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xs font-black text-gray-500 uppercase tracking-widest">Protocol</h2>
-                <button onclick="toggleEditMode()" class="text-[10px] bg-gray-800 px-2 py-1 rounded uppercase font-bold text-green-400">Edit</button>
+                <h2 class="text-xs font-black text-gray-500 uppercase">Daily Tasks</h2>
+                <button onclick="toggleEditMode()" id="editBtn" class="text-[10px] text-red-500 uppercase font-bold">Edit</button>
             </div>
             <div id="editControls" class="hidden mb-4 space-y-2">
                 <input type="text" id="newTaskInput" placeholder="New Task..." class="w-full bg-black border border-gray-700 p-2 rounded text-xs text-white">
-                <button onclick="addTask()" class="w-full bg-green-900 text-green-400 text-[10px] font-bold py-1 rounded">Confirm</button>
+                <button onclick="addTask()" class="w-full bg-red-900 text-white text-[10px] font-bold py-1 rounded">ADD</button>
             </div>
             <div id="habitList" class="space-y-3"></div>
         </section>
 
         <section class="ninja-card p-6 md:col-span-2 space-y-6">
-            <div class="grid grid-cols-2 gap-4">
-                <div class="bg-black/40 rounded-xl p-4 border border-gray-800 text-center">
-                    <label class="block text-[10px] text-gray-500 mb-1 uppercase font-black">Screen Time (4h Safe)</label>
-                    <input type="number" id="screenTimeInput" value="0" class="w-full bg-transparent p-2 text-3xl font-bold text-center outline-none text-white">
+            <div class="grid grid-cols-2 gap-4 text-center">
+                <div class="bg-black p-4 rounded-xl border border-gray-800">
+                    <label class="block text-[10px] text-gray-500 uppercase font-black">Screen Time</label>
+                    <input type="number" id="screenTimeInput" value="0" class="w-full bg-transparent text-3xl font-bold text-center outline-none text-white">
                 </div>
-                <div class="bg-black/40 rounded-xl p-4 border border-gray-800 text-center">
-                    <p class="text-[10px] text-gray-500 uppercase font-black">Spirit (Mood)</p>
-                    <select id="moodSelect" class="bg-transparent text-2xl mt-2 outline-none text-white">
-                        <option value="good" class="bg-black">🔥 Great</option>
-                        <option value="ok" class="bg-black">😐 Okay</option>
-                        <option value="bad" class="bg-black">😞 Bad</option>
+                <div class="bg-black p-4 rounded-xl border border-gray-800">
+                    <p class="text-[10px] text-gray-500 uppercase font-black">Mood</p>
+                    <select id="moodSelect" class="bg-transparent text-2xl mt-2 outline-none text-white appearance-none">
+                        <option value="good" class="bg-black">🔥</option>
+                        <option value="ok" class="bg-black">😐</option>
+                        <option value="bad" class="bg-black">😞</option>
                     </select>
                 </div>
             </div>
             
-            <div class="text-center bg-black/60 p-4 rounded-xl border border-gray-900">
-                <p id="liveScore" class="text-4xl font-black accent-green">0</p>
-                <p id="penaltyInfo" class="text-[9px] font-bold uppercase mt-1"></p>
-            </div>
-
-            <button onclick="saveDailyLog()" class="w-full bg-[#00ff88] text-black font-black py-5 rounded-2xl transition-all uppercase text-xl shadow-lg active:scale-95">
-                Execute Entry
+            <button onclick="saveDailyLog()" class="w-full bg-red-700 hover:bg-red-600 text-white font-black py-5 rounded-2xl transition-all uppercase text-xl shadow-lg active:scale-95">
+                Execute Daily Entry
             </button>
         </section>
-
-        <section class="ninja-card p-6 md:col-span-3">
-            <h2 class="text-xs font-black text-gray-500 uppercase tracking-widest mb-4">Scroll of History</h2>
-            <div id="historyLog" class="history-scroll space-y-2 max-h-48 overflow-y-auto pr-2"></div>
-        </section>
-    </div>
-
-    <div class="mt-12 text-center pb-10">
-        <button onclick="resetJourney()" class="text-[10px] text-gray-700 hover:text-red-600 font-bold uppercase tracking-[3px] transition-all duration-300">
-            ⚔️ End This Journey & Restart ⚔️
-        </button>
     </div>
 
     <script>
-        let habits = JSON.parse(localStorage.getItem('ninjaHabits')) || ["Gym", "Reading", "Deep Work"];
-        let history = JSON.parse(localStorage.getItem('ninjaHistory')) || [];
+        let habits = JSON.parse(localStorage.getItem('ninjaHabits')) || ["Gym", "Reading"];
         let totalXP = JSON.parse(localStorage.getItem('ninjaXP')) || 0;
-        let goodMoodCount = JSON.parse(localStorage.getItem('goodMoodCount')) || 0;
         let isEditMode = false;
 
-        setTimeout(() => {
-            document.getElementById('splash').style.opacity = '0';
-            setTimeout(() => document.getElementById('splash').style.display = 'none', 1500);
-        }, 2000);
+        const bossData = {
+            "Genin": { name: "Deidara", req: 300, icon: "💣", vid: "https://www.youtube.com/embed/5Uq8S7S9m6I?autoplay=1" },
+            "Chunin": { name: "Itachi Uchiha", req: 1000, icon: "👁️", vid: "https://www.youtube.com/embed/S2pEos_N73M?autoplay=1" },
+            "Shadow Master": { name: "Pain (Six Paths)", req: 5000, icon: "⛈️", vid: "https://www.youtube.com/embed/8-9-X_YF9K0?autoplay=1" }
+        };
 
-        function resetJourney() {
-            const firstCheck = confirm("DANGER: This will wipe your history and XP back to zero. Proceed?");
-            if (firstCheck) {
-                const secondCheck = confirm("FINAL WARNING: Are you truly ready to start your journey from nothing?");
-                if (secondCheck) {
-                    localStorage.clear();
-                    location.reload();
+        setTimeout(() => { document.getElementById('splash').style.opacity = '0'; setTimeout(() => document.getElementById('splash').style.display = 'none', 1000); }, 1500);
+
+        function checkBoss() {
+            const now = new Date();
+            const isSaturday = now.getDay() === 6;
+            const isNight = now.getHours() >= 18; // After 6 PM
+
+            if (isSaturday && isNight) {
+                const rank = getRank();
+                const boss = bossData[rank];
+                if (boss) {
+                    const section = document.getElementById('bossSection');
+                    section.classList.remove('hidden');
+                    section.classList.add('boss-active');
+                    document.getElementById('bossName').innerText = boss.name;
+                    document.getElementById('bossImage').innerText = boss.icon;
+                    document.getElementById('bossReq').innerText = boss.req;
+
+                    if (totalXP >= boss.req) {
+                        document.getElementById('victoryActions').classList.remove('hidden');
+                        document.getElementById('defeatWarning').classList.add('hidden');
+                    }
                 }
             }
         }
 
-        function checkWeekendBoss() {
-            const day = new Date().getDay();
-            if (day === 0 || day === 6) {
-                document.getElementById('bossSection').classList.remove('hidden');
-                let difficulty = 650;
-                if (totalXP > 1000) difficulty = 800;
-                if (totalXP > 3000) difficulty = 1000;
-                document.getElementById('bossReq').innerText = difficulty;
-            }
+        function getRank() {
+            if (totalXP >= 5000) return "Shadow Master";
+            if (totalXP >= 1000) return "Chunin";
+            if (totalXP >= 300) return "Genin";
+            return "Recruit";
         }
 
-        function calculateScore() {
-            const screenTime = parseFloat(document.getElementById('screenTimeInput').value) || 0;
-            const checkedCount = document.querySelectorAll('.habit-check:checked').length;
-            let gain = checkedCount * 20;
-            if (checkedCount === 0 && habits.length > 0) gain = -5;
-            let screenPenalty = screenTime > 4 ? (screenTime - 4) * 10 : 0;
-            let finalDailyScore = gain - screenPenalty;
-            if (finalDailyScore > 100) finalDailyScore = 100;
-
-            document.getElementById('liveScore').innerText = (finalDailyScore > 0 ? "+" : "") + Math.round(finalDailyScore);
-            document.getElementById('penaltyInfo').innerText = screenTime > 4 ? `Penalty: -${Math.round(screenPenalty)} XP` : "Safe Zone Active";
-            document.getElementById('penaltyInfo').style.color = screenTime > 4 ? "#ef4444" : "#00ff88";
-            return Math.round(finalDailyScore);
+        function playBattle() {
+            const rank = getRank();
+            const videoUrl = bossData[rank].vid;
+            document.getElementById('battleVideo').src = videoUrl;
+            document.getElementById('videoOverlay').style.display = 'flex';
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
         }
 
-        function saveDailyLog() {
-            const dailyScore = calculateScore();
-            const mood = document.getElementById('moodSelect').value;
-            const today = new Date().toLocaleDateString();
-
-            if (history.some(h => h.date === today)) {
-                alert("Protocol already executed for today.");
-                return;
-            }
-
-            if (mood === 'good') {
-                goodMoodCount++;
-                localStorage.setItem('goodMoodCount', goodMoodCount);
-            }
-
-            const day = new Date().getDay();
-            if (day === 0 || day === 6) {
-                const req = parseInt(document.getElementById('bossReq').innerText);
-                if (dailyScore * 10 >= req) {
-                    alert("SHOGUN DEFEATED!");
-                    confetti({ particleCount: 200, spread: 100 });
-                }
-            }
-
-            totalXP += dailyScore;
-            if (totalXP < 0) totalXP = 0;
-            
-            history.unshift({ date: today, score: dailyScore, mood: mood });
-            localStorage.setItem('ninjaXP', JSON.stringify(totalXP));
-            localStorage.setItem('ninjaHistory', JSON.stringify(history));
-            
-            updateUI();
-            renderHistory();
-            alert(`Saved! XP: ${dailyScore}`);
+        function closeVideo() {
+            document.getElementById('videoOverlay').style.display = 'none';
+            document.getElementById('battleVideo').src = "";
         }
 
-        function renderHistory() {
-            const log = document.getElementById('historyLog');
-            log.innerHTML = history.map(h => `
-                <div class="flex justify-between items-center bg-black/40 p-3 rounded-lg border border-gray-800 text-[10px]">
-                    <span class="text-gray-500 font-bold">${h.date}</span>
-                    <span class="font-black uppercase tracking-widest ${h.score >= 0 ? 'text-green-400' : 'text-red-500'}">
-                        ${h.score > 0 ? '+' : ''}${h.score} XP
-                    </span>
-                    <span class="text-lg">${h.mood === 'good' ? '🔥' : h.mood === 'ok' ? '😐' : '😞'}</span>
-                </div>
-            `).join('');
-        }
-
-        function updateUI() {
-            document.getElementById('totalXpDisplay').innerText = Math.round(totalXP);
-            document.getElementById('moodStreak').innerText = `${goodMoodCount} / 25 Days`;
-            let rank = "Recruit", color = "#9ca3af", nextXP = 200;
-            if (totalXP >= 5000) { rank = "Shadow Master"; color = "#facc15"; nextXP = 10000; }
-            else if (totalXP >= 800) { rank = "Chunin"; color = "#3b82f6"; nextXP = 2000; }
-            else if (totalXP >= 200) { rank = "Genin"; color = "#00ff88"; nextXP = 800; }
-            document.getElementById('rankTitle').innerText = rank;
-            document.getElementById('rankTitle').style.color = color;
-            document.getElementById('masteryBar').style.width = `${Math.min((totalXP / nextXP) * 100, 100)}%`;
+        function toggleEditMode() {
+            isEditMode = !isEditMode;
+            document.getElementById('editControls').classList.toggle('hidden');
+            document.getElementById('editBtn').innerText = isEditMode ? "DONE" : "EDIT";
+            renderHabits();
         }
 
         function renderHabits() {
             document.getElementById('habitList').innerHTML = habits.map((h, i) => `
-                <div class="flex items-center justify-between bg-black/50 p-3 rounded-xl border border-gray-900">
-                    <span class="text-xs font-bold uppercase tracking-widest text-white">${h}</span>
-                    <input type="checkbox" onchange="calculateScore()" class="habit-check w-6 h-6 accent-green-500">
+                <div class="flex items-center justify-between bg-black p-3 rounded-xl border border-gray-900">
+                    <span class="text-xs font-bold uppercase text-white">${h}</span>
+                    ${isEditMode ? `<button onclick="removeHabit(${i})" class="text-red-500 font-bold">×</button>` : `<input type="checkbox" class="habit-check w-6 h-6 accent-red-600">`}
                 </div>`).join('');
         }
 
-        function toggleEditMode() { isEditMode = !isEditMode; document.getElementById('editControls').classList.toggle('hidden'); }
         function addTask() {
             const val = document.getElementById('newTaskInput').value;
-            if(val) { habits.push(val); localStorage.setItem('ninjaHabits', JSON.stringify(habits)); renderHabits(); document.getElementById('newTaskInput').value = "";}
+            if(val) { habits.push(val); localStorage.setItem('ninjaHabits', JSON.stringify(habits)); renderHabits(); document.getElementById('newTaskInput').value=""; }
         }
 
-        document.getElementById('screenTimeInput').addEventListener('input', calculateScore);
+        function removeHabit(i) { habits.splice(i, 1); localStorage.setItem('ninjaHabits', JSON.stringify(habits)); renderHabits(); }
+
+        function saveDailyLog() {
+            const now = new Date();
+            if (now.getDay() === 0) { alert("It is Sunday. Rest and recover."); return; }
+
+            const screenTime = parseFloat(document.getElementById('screenTimeInput').value) || 0;
+            const checks = document.querySelectorAll('.habit-check:checked').length;
+            let dailyGain = (checks * 20) - (screenTime > 4 ? (screenTime - 4) * 10 : 0);
+            
+            totalXP += Math.round(dailyGain);
+            if (totalXP < 0) totalXP = 0;
+            
+            localStorage.setItem('ninjaXP', JSON.stringify(totalXP));
+            updateUI();
+            checkBoss();
+            alert(`XP Updated! Current Rank: ${getRank()}`);
+        }
+
+        function updateUI() {
+            document.getElementById('totalXpDisplay').innerText = totalXP;
+            const rank = getRank();
+            document.getElementById('rankTitle').innerText = rank;
+            document.getElementById('rankTitle').style.color = rank === "Shadow Master" ? "#facc15" : rank === "Chunin" ? "#ef4444" : "#00ff88";
+            document.getElementById('masteryBar').style.width = `${Math.min((totalXP / 5000) * 100, 100)}%`;
+        }
+
         renderHabits();
         updateUI();
-        renderHistory();
-        checkWeekendBoss();
+        checkBoss();
     </script>
 </body>
 </html>
-<div class="mt-10 text-center">
-    <button onclick="resetJourney()" class="text-[10px] text-red-900 font-bold uppercase tracking-widest hover:text-red-500 transition-colors">
-        ⚠️ Reset All Data & Restart Journey
-    </button>
-</div>
-
-<script>
-    function resetJourney() {
-        if (confirm("Are you sure? This will delete all your XP, History, and Ranks forever. You will start as a Recruit again.")) {
-            localStorage.clear();
-            location.reload();
-        }
-    }
-    // ... rest of your existing script functions ...
-</script>
