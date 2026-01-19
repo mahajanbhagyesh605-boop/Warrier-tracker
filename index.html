@@ -3,238 +3,231 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bike Racer - Nitro Edition</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Krish Wars">
+    <title>Krish Wars: Performance Protocol</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Inter:wght@400;900&display=swap" rel="stylesheet">
     <style>
-        body { background: #050505; color: white; font-family: 'Inter', sans-serif; margin: 0; overflow: hidden; touch-action: manipulation; }
-        #gameCanvas { background: #1a1a1a; display: block; width: 100vw; height: 55vh; border-bottom: 4px solid #333; }
-        .btn-control { background: rgba(255,255,255,0.05); border: 2px solid #444; border-radius: 50%; width: 65px; height: 65px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 10px; color: #888; transition: 0.1s; }
-        .btn-active { background: #3b82f6 !important; border-color: #fff; color: white; transform: scale(0.9); }
-        .nitro-active { background: #facc15 !important; border-color: #fff; color: black; box-shadow: 0 0 20px #facc15; }
-        #splash { position: fixed; inset: 0; background: #000; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .locked { filter: grayscale(1) opacity(0.3); pointer-events: none; }
-        .nitro-bar-container { width: 100px; height: 8px; background: #222; border-radius: 4px; overflow: hidden; border: 1px solid #444; }
-        #nitroFill { height: 100%; width: 0%; background: linear-gradient(90deg, #3b82f6, #60a5fa); transition: width 0.1s; }
+        body { background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow-x: hidden; touch-action: manipulation; }
+        .ninja-card { background: #0a0a0a; border: 1px solid #1a1a1a; border-radius: 20px; padding: 20px; }
+        .grid-square { width: 10px; height: 10px; border-radius: 2px; background: #1a1a1a; }
+        .success { background: #22c55e !important; box-shadow: 0 0 8px #22c55e; }
+        .fail { background: #ef4444 !important; }
+        #splash { position: fixed; inset: 0; background: #000; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: 1s ease; }
+        .boss-bg { background: linear-gradient(to bottom, #000, #200); }
+        input[type="checkbox"] { width: 28px; height: 28px; accent-color: #ef4444; cursor: pointer; }
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        body::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body>
+<body class="p-4 max-w-2xl mx-auto pb-20">
 
     <div id="splash">
-        <div class="w-24 h-24 mb-4 border-4 border-blue-600 rounded-full flex items-center justify-center animate-pulse">
-            <span class="text-5xl font-serif italic font-black text-blue-600">B</span>
+        <div class="w-24 h-24 mb-6 border-4 border-red-600 rounded-full flex items-center justify-center animate-bounce">
+            <span class="text-6xl text-red-600">⚔️</span>
         </div>
-        <h1 class="text-3xl font-black uppercase tracking-[8px]">Bike Racer</h1>
-        <p class="text-blue-500 text-[10px] mt-2 font-bold uppercase tracking-widest">Nitro Powered</p>
+        <h1 class="text-3xl font-black tracking-[10px] uppercase text-white">Krish Wars</h1>
+        <p class="text-gray-500 text-[10px] mt-4 font-bold tracking-widest uppercase italic">Penalty Active: 19 Days Lost</p>
     </div>
 
-    <div id="menu" class="hidden fixed inset-0 bg-black/95 p-8 z-40 overflow-y-auto">
-        <h2 class="text-xl font-black text-center mb-8 uppercase tracking-widest text-blue-500">Select Track</h2>
-        <div id="levelGrid" class="grid grid-cols-2 sm:grid-cols-5 gap-4"></div>
+    <div id="gameOverlay" class="fixed inset-0 bg-black/98 z-50 hidden flex flex-col items-center justify-center p-6 boss-bg">
+        <h2 id="bossNameDisplay" class="text-5xl font-black text-red-600 uppercase mb-2 text-center"></h2>
+        <p id="battleLog" class="text-blue-400 font-bold mb-10 h-6 uppercase tracking-tighter">Combat Engaged</p>
+        <div id="enemySprite" class="text-9xl mb-10 animate-pulse"></div>
+        <div class="w-full max-w-md bg-gray-900 h-4 rounded-full overflow-hidden mb-12 border border-red-900">
+            <div id="bossHpBar" class="h-full bg-red-600 transition-all duration-300" style="width: 100%;"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-4 w-full max-w-sm">
+            <button onclick="attack(15)" class="bg-blue-600 p-6 rounded-2xl font-black uppercase text-sm border-b-8 border-blue-900 active:translate-y-2 active:border-b-0">Katana</button>
+            <button onclick="attack(40)" class="bg-red-600 p-6 rounded-2xl font-black uppercase text-sm border-b-8 border-red-900 active:translate-y-2 active:border-b-0">Jutsu</button>
+        </div>
+        <button onclick="closeBattle()" class="mt-12 text-gray-600 uppercase text-[10px] font-bold">Withdraw</button>
     </div>
 
-    <div id="ui" class="hidden">
-        <div class="flex justify-between items-center p-4 bg-black border-b border-white/10">
+    <header class="mb-8 pt-4">
+        <div class="flex justify-between items-end mb-4">
             <div>
-                <p class="text-[9px] text-gray-500 uppercase font-black">Level <span id="currentLevelText">1</span></p>
-                <p class="text-lg font-black font-mono" id="timer">00:00</p>
-            </div>
-            <div class="flex flex-col items-center">
-                <p class="text-[9px] text-blue-400 uppercase font-black mb-1">Nitro</p>
-                <div class="nitro-bar-container"><div id="nitroFill"></div></div>
+                <h2 id="rankDisplay" class="text-4xl font-black text-green-500 italic uppercase" style="font-family: 'VT323';">Recruit</h2>
+                <div id="totalXpDisplay" class="text-xs text-gray-500 font-bold uppercase mt-1">XP: 0</div>
             </div>
             <div class="text-right">
-                <p class="text-[9px] text-gray-500 uppercase font-black">Rank</p>
-                <p class="text-lg font-black text-blue-500" id="posText">1/5</p>
+                <div id="streakDisplay" class="text-4xl font-black text-blue-500">0</div>
+                <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Day Streak</p>
             </div>
         </div>
-        
-        <canvas id="gameCanvas"></canvas>
+        <div class="h-2 w-full bg-gray-950 rounded-full overflow-hidden border border-gray-900">
+            <div id="mainXpBar" class="h-full bg-green-500 transition-all duration-1000" style="width: 0%;"></div>
+        </div>
+    </header>
 
-        <div class="fixed bottom-0 left-0 right-0 h-[35vh] bg-black p-4 grid grid-cols-2">
-            <div class="flex flex-col justify-center gap-4">
-                <div class="flex gap-4">
-                    <div id="btnLeft" class="btn-control">LEFT</div>
-                    <div id="btnRight" class="btn-control">RIGHT</div>
-                </div>
+    <section class="ninja-card mb-8 text-center">
+        <p class="text-[9px] text-gray-600 font-black uppercase mb-4 tracking-widest">365-Day Protocol Integrity</p>
+        <div id="historyGrid" class="flex flex-wrap justify-center gap-1.5"></div>
+    </section>
+
+    <div id="bossBox" class="hidden ninja-card border-2 border-red-600 mb-8 text-center animate-pulse">
+        <h3 class="text-xl font-black text-red-600 uppercase mb-2">Genin Trial Available</h3>
+        <p id="bossRequiredText" class="text-[10px] text-gray-400 uppercase mb-4">14-Day Streak Unlocked</p>
+        <button onclick="initiateBattle()" class="bg-white text-black font-black w-full py-4 rounded-xl uppercase hover:bg-red-600 hover:text-white transition-colors">Fight Deidara</button>
+    </div>
+
+    <div class="grid gap-6">
+        <section class="ninja-card">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest">Daily Scroll</h3>
+                <button onclick="toggleEdit()" id="editBtn" class="text-[10px] text-red-600 font-bold border border-red-900 px-3 py-1 rounded uppercase">Edit</button>
             </div>
-            <div class="flex flex-col items-end justify-center gap-4">
-                <div id="btnNitro" class="btn-control !w-full !rounded-xl border-blue-500 text-blue-400">NITRO BOOST</div>
-                <div class="flex gap-4">
-                    <div id="btnBrake" class="btn-control border-red-900 text-red-700">BRAKE</div>
-                    <div id="btnGo" class="btn-control border-green-900 text-green-700 text-xl">GAS</div>
-                </div>
+            <div id="editTools" class="hidden mb-6 space-y-3">
+                <input type="text" id="habitIn" placeholder="New Protocol..." class="w-full bg-black border border-gray-800 p-4 rounded-xl text-sm outline-none focus:border-red-600">
+                <button onclick="addHabit()" class="w-full bg-red-600 text-[10px] font-black py-4 rounded-xl uppercase">Update Protocol</button>
             </div>
-        </div>
+            <div id="habitList" class="space-y-4"></div>
+        </section>
+
+        <section class="ninja-card text-center">
+            <p class="text-[10px] text-gray-500 font-black uppercase mb-4 tracking-widest">Screen Time (H)</p>
+            <input type="number" id="screenIn" value="0" oninput="updateLive()" class="bg-transparent text-6xl font-black text-center outline-none w-full text-white">
+            <div class="mt-8 p-6 bg-black rounded-2xl border border-gray-900">
+                <p class="text-[10px] text-gray-600 uppercase font-black mb-2 tracking-[2px]">Daily Forecast</p>
+                <div id="liveXp" class="text-7xl font-black text-white">0</div>
+                <p class="text-[9px] text-red-900 uppercase mt-4 font-bold tracking-widest">Midnight Judgment Active</p>
+            </div>
+        </section>
+    </div>
+
+    <div class="mt-12 text-center opacity-20 hover:opacity-100 transition-opacity">
+        <button onclick="confirmRestart()" class="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Terminate Journey</button>
     </div>
 
     <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        let unlocked = parseInt(localStorage.getItem('bikeRacerLevels')) || 1;
-        let currentLevel = 1;
-        let gameActive = false;
-        let trackLength = 0;
-        let finishLine = 0;
-        let shake = 0;
-
-        const player = { x: 200, y: 0, speed: 0, lane: 2, targetX: 200, nitro: 100 };
-        const opponents = [];
-        const lanes = [40, 110, 180, 250, 320];
-
-        setTimeout(() => {
-            document.getElementById('splash').style.opacity = '0';
-            setTimeout(() => { document.getElementById('splash').style.display = 'none'; showMenu(); }, 800);
-        }, 1500);
-
-        function showMenu() {
-            document.getElementById('menu').classList.remove('hidden');
-            const grid = document.getElementById('levelGrid');
-            grid.innerHTML = '';
-            for(let i=1; i<=10; i++) {
-                const btn = document.createElement('button');
-                btn.className = `p-6 rounded-2xl font-black text-xl border-2 transition-all ${i <= unlocked ? 'border-blue-600 bg-blue-900/10 text-white' : 'border-gray-900 text-gray-700 locked'}`;
-                btn.innerText = i;
-                btn.onclick = () => startLevel(i);
-                grid.appendChild(btn);
-            }
-        }
-
-        function startLevel(num) {
-            currentLevel = num;
-            gameActive = true;
-            trackLength = (60 + (num - 1) * 30) * 120; // Feature: Increased time per level
-            finishLine = trackLength - 600;
-            player.y = 0; player.speed = 0; player.lane = 2; player.nitro = 100;
-            
-            opponents.length = 0;
-            for(let i=0; i<4; i++) {
-                opponents.push({
-                    x: lanes[i < 2 ? i : i + 1],
-                    y: Math.random() * -300,
-                    speed: 6 + (num * 0.7) + Math.random() * 2,
-                    color: `hsl(${200 + Math.random() * 50}, 80%, 40%)`
-                });
-            }
-
-            document.getElementById('menu').classList.add('hidden');
-            document.getElementById('ui').classList.remove('hidden');
-            resize();
-            requestAnimationFrame(gameLoop);
-        }
-
-        function resize() { canvas.width = window.innerWidth; canvas.height = canvas.offsetHeight; }
-
-        const keys = {};
-        const setupBtn = (id, key) => {
-            const el = document.getElementById(id);
-            const start = (e) => { e.preventDefault(); keys[key] = true; el.classList.add(key === 'nitro' ? 'nitro-active' : 'btn-active'); };
-            const end = () => { keys[key] = false; el.classList.remove('btn-active', 'nitro-active'); };
-            el.addEventListener('touchstart', start); el.addEventListener('touchend', end);
-            el.addEventListener('mousedown', start); el.addEventListener('mouseup', end);
+        // --- 1. STATE MANAGEMENT ---
+        let state = JSON.parse(localStorage.getItem('krishV3')) || {
+            xp: 0,
+            habits: ["Gym", "Meditation", "Deep Work", "No Junk Food"],
+            history: [], 
+            streak: 0,
+            lastCheckDate: new Date().toDateString(),
+            checks: {}
         };
-        setupBtn('btnGo', 'go'); setupBtn('btnBrake', 'brake'); setupBtn('btnLeft', 'left'); setupBtn('btnRight', 'right'); setupBtn('btnNitro', 'nitro');
 
-        function gameLoop() {
-            if(!gameActive) return;
-            update();
-            draw();
-            requestAnimationFrame(gameLoop);
-        }
+        const bosses = [
+            { name: "Deidara", rank: "Genin", req: 1400, icon: "💣", hp: 100 },
+            { name: "Madara", rank: "Chunin", req: 3400, icon: "👺", hp: 250 },
+            { name: "Itachi", rank: "Shadow Master", req: 6000, icon: "👁️", hp: 500 }
+        ];
 
-        function update() {
-            // Speed Logic
-            let maxSpeed = 14 + (currentLevel * 0.5);
-            let accel = 0.15;
+        let activeBoss = null, bossHP = 100;
 
-            if(keys.nitro && player.nitro > 0) {
-                maxSpeed *= 1.8;
-                accel = 0.4;
-                player.nitro -= 0.8;
-                shake = 5;
-            } else {
-                player.nitro = Math.min(100, player.nitro + 0.1);
-                shake *= 0.9;
-            }
-
-            if(keys.go) player.speed += accel;
-            else if(keys.brake) player.speed -= 0.4;
-            else player.speed -= 0.08;
-
-            player.speed = Math.max(0, Math.min(player.speed, maxSpeed));
-            player.y += player.speed;
-
-            // Steering
-            if(keys.left && player.lane > 0) { player.lane--; keys.left = false; }
-            if(keys.right && player.lane < 4) { player.lane++; keys.right = false; }
-            player.x += (lanes[player.lane] - player.x) * 0.2;
-
-            opponents.forEach(o => { o.y += o.speed; if(o.y > player.y + 1200) o.y -= 2400; });
-
-            let pos = 1;
-            opponents.forEach(o => { if(o.y > player.y) pos++; });
-            document.getElementById('posText').innerText = `${pos}/5`;
-            document.getElementById('timer').innerText = `FINISH: ${Math.floor(Math.max(0, (finishLine - player.y)/100))}m`;
-            document.getElementById('nitroFill').style.width = player.nitro + '%';
-
-            if(player.y >= finishLine) {
-                gameActive = false;
-                if(pos === 1) {
-                    alert("LEVEL COMPLETE! Bugatti Performance Proven.");
-                    if(currentLevel === unlocked && unlocked < 10) unlocked++;
-                    localStorage.setItem('bikeRacerLevels', unlocked);
-                } else { alert("FAILED! You must be 1st."); }
-                document.getElementById('ui').classList.add('hidden');
-                showMenu();
+        // --- 2. PENALTY & MIDNIGHT LOGIC ---
+        function applyPenalty() {
+            if (state.history.length === 0) {
+                for (let i = 0; i < 19; i++) state.history.push(0); 
+                save();
             }
         }
 
-        function draw() {
-            ctx.save();
-            if(shake > 0.1) ctx.translate(Math.random()*shake - shake/2, Math.random()*shake - shake/2);
-            
-            ctx.fillStyle = '#111';
-            ctx.fillRect(0,0,canvas.width, canvas.height);
-            
-            // Road Lines
-            ctx.strokeStyle = '#333';
-            ctx.setLineDash([30, 30]);
-            ctx.lineWidth = 2;
-            lanes.forEach(l => {
-                ctx.beginPath(); ctx.moveTo(l + 35, 0); ctx.lineTo(l + 35, canvas.height); ctx.stroke();
-            });
-
-            // Finish Line
-            if(finishLine - player.y < 1000) {
-                ctx.fillStyle = 'white';
-                for(let i=0; i<10; i++) {
-                    ctx.fillRect(i*canvas.width/10, canvas.height/2 + (finishLine - player.y), canvas.width/20, 20);
-                }
+        function checkMidnight() {
+            const today = new Date().toDateString();
+            if (state.lastCheckDate !== today) {
+                const dayResult = calcXP();
+                state.xp += dayResult;
+                state.history.push(dayResult);
+                state.streak = dayResult >= 100 ? state.streak + 1 : 0;
+                state.checks = {}; 
+                state.lastCheckDate = today;
+                save();
             }
-
-            opponents.forEach(o => {
-                const screenY = canvas.height/2 + (o.y - player.y);
-                if(screenY > -50 && screenY < canvas.height + 50) drawBike(o.x, screenY, o.color, false);
-            });
-
-            drawBike(player.x, canvas.height/2, '#3b82f6', keys.nitro && player.nitro > 0);
-            ctx.restore();
         }
 
-        function drawBike(x, y, color, isNitro) {
-            if(isNitro) {
-                ctx.fillStyle = '#facc15';
-                ctx.beginPath(); ctx.moveTo(x+17, y+20); ctx.lineTo(x+10, y+50); ctx.lineTo(x+25, y+50); ctx.fill();
-            }
-            ctx.fillStyle = 'black';
-            ctx.fillRect(x + 12, y - 25, 11, 10); // Front wheel
-            ctx.fillRect(x + 12, y + 15, 11, 10); // Back wheel
-            ctx.fillStyle = color;
-            ctx.fillRect(x + 10, y - 20, 15, 40); // Frame
-            ctx.fillStyle = '#555';
-            ctx.fillRect(x + 5, y - 5, 25, 5); // Handlebars
+        function calcXP() {
+            const total = state.habits.length;
+            if (total === 0) return 0;
+            const completed = Object.values(state.checks).filter(Boolean).length;
+            const screen = parseFloat(document.getElementById('screenIn')?.value) || 0;
+            let val = ((completed / total) * 100) - (screen > 4 ? (screen - 4) * 5 : 0);
+            return Math.min(Math.max(Math.round(val), -100), 100);
         }
 
-        window.addEventListener('resize', resize);
+        // --- 3. UI ENGINE ---
+        function render() {
+            let rank = "Recruit", color = "#666";
+            if(state.xp >= 6000) { rank = "Shadow Master"; color = "#facc15"; }
+            else if(state.xp >= 3400) { rank = "Chunin"; color = "#ef4444"; }
+            else if(state.xp >= 1400) { rank = "Genin"; color = "#22c55e"; }
+
+            document.getElementById('rankDisplay').innerText = rank;
+            document.getElementById('rankDisplay').style.color = color;
+            document.getElementById('totalXpDisplay').innerText = `TOTAL XP: ${Math.round(state.xp)}`;
+            document.getElementById('streakDisplay').innerText = state.streak;
+            document.getElementById('mainXpBar').style.width = Math.min((state.xp / 1400) * 100, 100) + '%';
+            document.getElementById('liveXp').innerText = calcXP();
+
+            document.getElementById('habitList').innerHTML = state.habits.map((h, i) => `
+                <div class="flex items-center justify-between bg-gray-950 p-5 rounded-2xl border border-gray-900">
+                    <span class="text-xs font-bold uppercase tracking-wider">${h}</span>
+                    <div>
+                        ${document.getElementById('editTools').classList.contains('hidden') ? 
+                        `<input type="checkbox" onchange="toggleCheck('${h}')" ${state.checks[h] ? 'checked' : ''}>` :
+                        `<button onclick="delHabit(${i})" class="text-red-500 font-black text-[10px] uppercase">Remove</button>`}
+                    </div>
+                </div>`).join('');
+
+            const gridEl = document.getElementById('historyGrid');
+            gridEl.innerHTML = '';
+            for(let i=0; i<365; i++) {
+                const div = document.createElement('div');
+                div.className = 'grid-square ' + (state.history[i] >= 100 ? 'success' : (state.history[i] !== undefined ? 'fail' : ''));
+                gridEl.appendChild(div);
+            }
+
+            const bossBox = document.getElementById('bossBox');
+            if (state.streak >= 14 && state.xp >= 1400) {
+                activeBoss = bosses.find(b => state.xp < b.req + 1000) || bosses[0];
+                bossBox.classList.remove('hidden');
+            } else { bossBox.classList.add('hidden'); }
+        }
+
+        // --- 4. ACTION FUNCTIONS ---
+        function toggleCheck(name) { state.checks[name] = !state.checks[name]; updateLive(); }
+        function updateLive() { document.getElementById('liveXp').innerText = calcXP(); save(); render(); }
+        
+        function initiateBattle() {
+            bossHP = activeBoss.hp;
+            document.getElementById('gameOverlay').classList.remove('hidden');
+            document.getElementById('bossNameDisplay').innerText = activeBoss.name;
+            document.getElementById('enemySprite').innerText = activeBoss.icon;
+            updateHP();
+        }
+
+        function attack(dmg) {
+            const m = 1 + (state.xp / 5000);
+            const total = Math.round(dmg * m);
+            bossHP -= total;
+            document.getElementById('battleLog').innerText = `CRITICAL HIT: ${total} DMG!`;
+            updateHP();
+            if(bossHP <= 0) {
+                confetti({ particleCount: 200, spread: 80 });
+                document.getElementById('battleLog').innerText = "VICTORY!";
+                setTimeout(closeBattle, 2000);
+            }
+        }
+
+        function updateHP() { document.getElementById('bossHpBar').style.width = Math.max(0, (bossHP / activeBoss.hp) * 100) + '%'; }
+        function closeBattle() { document.getElementById('gameOverlay').classList.add('hidden'); }
+        function toggleEdit() { document.getElementById('editTools').classList.toggle('hidden'); render(); }
+        function addHabit() { const v = document.getElementById('habitIn').value; if(v){ state.habits.push(v); document.getElementById('habitIn').value=''; save(); render(); }}
+        function delHabit(i) { state.habits.splice(i, 1); save(); render(); }
+        function confirmRestart() { if(confirm("This will wipe your 19-day penalty and all history. Terminate?")) { localStorage.clear(); location.reload(); } }
+        function save() { localStorage.setItem('krishV3', JSON.stringify(state)); }
+
+        // --- 5. EXECUTION ---
+        applyPenalty();
+        checkMidnight();
+        setTimeout(() => { document.getElementById('splash').style.opacity = '0'; setTimeout(()=>document.getElementById('splash').style.display='none', 1000); }, 2000);
+        render();
     </script>
 </body>
 </html>
