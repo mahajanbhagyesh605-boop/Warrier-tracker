@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>System</title>
 
@@ -9,224 +8,179 @@
 body {
     margin: 0;
     font-family: 'Segoe UI', sans-serif;
-    background: #05070d;
-    color: #00eaff;
+    background: url('https://i.imgur.com/8QfQZ6L.jpg') no-repeat center/cover;
+    color: white;
 }
 
-.container {
-    max-width: 500px;
-    margin: auto;
+.overlay {
+    background: rgba(0,0,0,0.7);
+    min-height: 100vh;
     padding: 20px;
 }
 
-h1 {
-    text-align: center;
-    letter-spacing: 2px;
+.top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.panel {
-    background: rgba(0, 234, 255, 0.05);
-    border: 1px solid rgba(0, 234, 255, 0.3);
-    padding: 15px;
-    margin-bottom: 20px;
+.bar {
+    width: 60%;
+    height: 10px;
+    border: 1px solid #00aaff;
+}
+
+.fill {
+    height: 100%;
+    background: #00aaff;
+}
+
+.card {
+    margin-top: 30px;
+    border: 1px solid #00aaff;
+    padding: 20px;
     border-radius: 10px;
+    background: rgba(0,0,0,0.6);
+}
+
+.task {
+    display: flex;
+    justify-content: space-between;
+    margin: 15px 0;
+}
+
+button {
+    background: none;
+    border: 1px solid #00aaff;
+    color: #00aaff;
+    padding: 5px 10px;
 }
 
 input {
     width: 70%;
     padding: 10px;
     background: transparent;
-    border: 1px solid #00eaff;
-    color: #00eaff;
-}
-
-button {
-    padding: 10px;
-    background: transparent;
-    border: 1px solid #00eaff;
-    color: #00eaff;
-    cursor: pointer;
-}
-
-button:hover {
-    background: #00eaff;
-    color: black;
-}
-
-.task {
-    display: flex;
-    justify-content: space-between;
-    padding: 10px;
-    margin-top: 10px;
-    border-bottom: 1px solid rgba(0,234,255,0.2);
-}
-
-.popup {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: black;
-    border: 1px solid #00eaff;
-    padding: 10px;
-    display: none;
-}
-
-.glow {
-    text-shadow: 0 0 8px #00eaff;
+    border: 1px solid #00aaff;
+    color: white;
 }
 </style>
 </head>
 
 <body>
 
-<div class="container">
-    <h1 class="glow">SYSTEM</h1>
+<div class="overlay">
 
-    <div class="panel">
-        <p>Player: Krishna</p>
-        <p>Level: <span id="level"></span></p>
-        <p>Rank: <span id="rank"></span></p>
-        <p>Streak: <span id="streak"></span></p>
-        <p>XP: <span id="xp"></span>/100</p>
+<div class="top">
+    <div>
+        LVL: <span id="level">1</span>
+        <div class="bar">
+            <div class="fill" id="xpBar"></div>
+        </div>
     </div>
 
-    <div class="panel">
-        <input id="taskInput" placeholder="Enter quest">
-        <button onclick="addTask()">Add</button>
+    <div>
+        STREAK: <span id="streak">0</span>
     </div>
-
-    <div class="panel" id="taskList"></div>
 </div>
 
-<div class="popup" id="popup"></div>
+<h1>DAILY TASKS</h1>
+
+<div class="card">
+    <input id="taskInput" placeholder="New Task">
+    <button onclick="addTask()">Add</button>
+
+    <div id="taskList"></div>
+</div>
+
+</div>
 
 <script>
 let level = parseInt(localStorage.getItem("level")) || 1;
 let streak = parseInt(localStorage.getItem("streak")) || 0;
 let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
-let completedToday = JSON.parse(localStorage.getItem("completedToday")) || [];
-let lastDate = localStorage.getItem("lastDate") || new Date().toDateString();
+let done = JSON.parse(localStorage.getItem("done")) || [];
+let lastDate = localStorage.getItem("date") || new Date().toDateString();
 
-function checkNewDay() {
+function newDayCheck() {
     let today = new Date().toDateString();
-
     if (today !== lastDate) {
-        if (tasks.length > 0 && completedToday.length === tasks.length) {
+
+        if (tasks.length > 0 && done.length === tasks.length) {
             streak++;
         } else {
             streak = 0;
         }
 
-        completedToday = [];
+        done = [];
         lastDate = today;
 
         localStorage.setItem("streak", streak);
-        localStorage.setItem("lastDate", lastDate);
-        localStorage.setItem("completedToday", JSON.stringify(completedToday));
+        localStorage.setItem("date", today);
     }
 }
 
-checkNewDay();
+newDayCheck();
 
-function getXPPerTask() {
-    return tasks.length === 0 ? 0 : Math.floor(100 / tasks.length);
+function xpPerTask() {
+    return tasks.length ? Math.floor(100 / tasks.length) : 0;
 }
 
-function getXP() {
-    return completedToday.length * getXPPerTask();
-}
-
-function getRank() {
-    if (level <= 5) return "E";
-    if (level <= 10) return "D";
-    if (level <= 20) return "C";
-    if (level <= 35) return "B";
-    if (level <= 50) return "A";
-    return "S";
-}
-
-function showPopup(text) {
-    let popup = document.getElementById("popup");
-    popup.innerText = text;
-    popup.style.display = "block";
-    setTimeout(() => popup.style.display = "none", 2000);
-}
-
-function saveData() {
-    localStorage.setItem("level", level);
-    localStorage.setItem("tasks", JSON.stringify(tasks));
-    localStorage.setItem("completedToday", JSON.stringify(completedToday));
+function xp() {
+    return done.length * xpPerTask();
 }
 
 function addTask() {
-    let input = document.getElementById("taskInput");
-    if (!input.value) return;
+    let val = taskInput.value;
+    if (!val) return;
 
-    tasks.push(input.value);
-    input.value = "";
-    renderTasks();
-    saveData();
+    tasks.push(val);
+    taskInput.value = "";
+    save();
+    render();
 }
 
-function completeTask(index) {
-    if (!completedToday.includes(index)) {
-        completedToday.push(index);
-        showPopup("Quest Completed");
-    }
+function completeTask(i) {
+    if (!done.includes(i)) done.push(i);
 
-    checkLevelUp();
-    updateStats();
-    saveData();
-    renderTasks();
-}
-
-function deleteTask(index) {
-    tasks.splice(index, 1);
-    completedToday = [];
-    renderTasks();
-    saveData();
-}
-
-function checkLevelUp() {
-    let xp = getXP();
-    let requiredStreak = level;
-
-    if (xp >= 100 && streak >= requiredStreak) {
+    if (xp() >= 100 && streak >= level) {
         level++;
         streak = 0;
-        showPopup("LEVEL UP");
+        alert("LEVEL UP");
     }
+
+    save();
+    render();
 }
 
-function updateStats() {
-    document.getElementById("level").innerText = level;
-    document.getElementById("rank").innerText = getRank();
-    document.getElementById("streak").innerText = streak;
-    document.getElementById("xp").innerText = getXP();
+function save() {
+    localStorage.setItem("tasks", JSON.stringify(tasks));
+    localStorage.setItem("done", JSON.stringify(done));
+    localStorage.setItem("level", level);
 }
 
-function renderTasks() {
-    let list = document.getElementById("taskList");
-    list.innerHTML = "";
+function render() {
+    taskList.innerHTML = "";
 
-    tasks.forEach((task, index) => {
-        let done = completedToday.includes(index);
+    tasks.forEach((t, i) => {
+        let completed = done.includes(i);
 
-        list.innerHTML += `
+        taskList.innerHTML += `
         <div class="task">
-            <span style="${done ? 'text-decoration: line-through;' : ''}">
-                ${task}
+            <span style="${completed ? 'text-decoration:line-through' : ''}">
+                ${t}
             </span>
-            <div>
-                <button onclick="completeTask(${index})">✔</button>
-                <button onclick="deleteTask(${index})">✖</button>
-            </div>
+            <button onclick="completeTask(${i})">✔</button>
         </div>`;
     });
+
+    document.getElementById("level").innerText = level;
+    document.getElementById("streak").innerText = streak;
+
+    let percent = xp();
+    document.getElementById("xpBar").style.width = percent + "%";
 }
 
-updateStats();
-renderTasks();
+render();
 </script>
 
 </body>
