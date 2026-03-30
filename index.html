@@ -2,186 +2,255 @@
 <html lang="en">
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>System</title>
+<title>Krishna System</title>
 
 <style>
 body {
     margin: 0;
     font-family: 'Segoe UI', sans-serif;
-    background: url('https://i.imgur.com/8QfQZ6L.jpg') no-repeat center/cover;
-    color: white;
+    background: #04070d;
+    color: #00aaff;
 }
 
-.overlay {
-    background: rgba(0,0,0,0.7);
-    min-height: 100vh;
-    padding: 20px;
-}
-
-.top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+.container {
+    max-width: 500px;
+    margin: auto;
+    padding: 15px;
 }
 
 .bar {
-    width: 60%;
     height: 10px;
     border: 1px solid #00aaff;
+    margin: 10px 0;
 }
-
-.fill {
-    height: 100%;
-    background: #00aaff;
-}
+.fill { height:100%; background:#00aaff; }
 
 .card {
-    margin-top: 30px;
-    border: 1px solid #00aaff;
-    padding: 20px;
+    border: 1px solid #00aaff33;
+    padding: 15px;
     border-radius: 10px;
-    background: rgba(0,0,0,0.6);
+    margin-top: 15px;
 }
 
 .task {
     display: flex;
     justify-content: space-between;
-    margin: 15px 0;
+    margin: 10px 0;
 }
 
-button {
-    background: none;
-    border: 1px solid #00aaff;
-    color: #00aaff;
-    padding: 5px 10px;
-}
-
-input {
-    width: 70%;
-    padding: 10px;
+input, select {
     background: transparent;
     border: 1px solid #00aaff;
     color: white;
+    padding: 5px;
 }
+
+button {
+    border: 1px solid #00aaff;
+    background: transparent;
+    color: #00aaff;
+    padding: 5px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(20, 1fr);
+    gap: 3px;
+}
+
+.box {
+    width: 100%;
+    padding-top: 100%;
+    background: #111;
+}
+
+.red { background: #ff4444; }
+
 </style>
 </head>
 
 <body>
+<div class="container">
 
-<div class="overlay">
+<h2>KRISHNA</h2>
+<p>Level: <span id="level"></span> | Rank: <span id="rank"></span></p>
 
-<div class="top">
-    <div>
-        LVL: <span id="level">1</span>
-        <div class="bar">
-            <div class="fill" id="xpBar"></div>
-        </div>
-    </div>
-
-    <div>
-        STREAK: <span id="streak">0</span>
-    </div>
-</div>
-
-<h1>DAILY TASKS</h1>
+<div class="bar"><div id="xpBar" class="fill"></div></div>
+<p>XP: <span id="xp"></span>/100</p>
+<p>Streak: <span id="streak"></span></p>
+<p>Timer: <span id="timer"></span></p>
 
 <div class="card">
-    <input id="taskInput" placeholder="New Task">
-    <button onclick="addTask()">Add</button>
+<h3>Stats</h3>
+<p>Strength: <span id="str"></span></p>
+<p>Knowledge: <span id="int"></span></p>
+<p>Discipline: <span id="disc"></span></p>
+</div>
 
-    <div id="taskList"></div>
+<div class="card">
+<h3>Add Task</h3>
+<input id="name" placeholder="Task">
+<input id="count" type="number" placeholder="Target">
+<select id="type">
+<option>Strength</option>
+<option>Knowledge</option>
+</select>
+<button onclick="addTask()">Add</button>
+</div>
+
+<div class="card" id="taskList"></div>
+
+<div class="card">
+<h3>Year Progress</h3>
+<div class="grid" id="grid"></div>
 </div>
 
 </div>
 
 <script>
-let level = parseInt(localStorage.getItem("level")) || 1;
-let streak = parseInt(localStorage.getItem("streak")) || 0;
-let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
-let done = JSON.parse(localStorage.getItem("done")) || [];
-let lastDate = localStorage.getItem("date") || new Date().toDateString();
+let data = JSON.parse(localStorage.data || "{}");
 
-function newDayCheck() {
-    let today = new Date().toDateString();
-    if (today !== lastDate) {
+if (!data.level) {
+    data = {
+        level:1, streak:0,
+        strength:0, knowledge:0, discipline:0,
+        tasks:[],
+        grid:{},
+        lastDate:new Date().toDateString()
+    };
+}
 
-        if (tasks.length > 0 && done.length === tasks.length) {
-            streak++;
+function rank() {
+    let l=data.level;
+    if(l<=5)return"E"; if(l<=10)return"D";
+    if(l<=20)return"C"; if(l<=35)return"B";
+    if(l<=50)return"A"; return"S";
+}
+
+function xpPerTask(){return data.tasks.length?100/data.tasks.length:0;}
+
+function xp(){
+    return data.tasks.filter(t=>t.done>=t.total).length * xpPerTask();
+}
+
+function newDay(){
+    let today=new Date().toDateString();
+    if(today!==data.lastDate){
+
+        let day=new Date().getDay();
+        let key=new Date().getFullYear()+"-"+new Date().getDate();
+
+        let allDone=data.tasks.length && data.tasks.every(t=>t.done>=t.total);
+
+        if(allDone){
+            data.streak++;
+            data.discipline++;
+            data.grid[key]=true;
         } else {
-            streak = 0;
+            data.streak=0;
+            data.grid[key]=false;
         }
 
-        done = [];
-        lastDate = today;
-
-        localStorage.setItem("streak", streak);
-        localStorage.setItem("date", today);
+        data.tasks.forEach(t=>t.done=0);
+        data.lastDate=today;
+        save();
     }
 }
 
-newDayCheck();
+function addTask(){
+    let n=name.value;
+    let c=+count.value;
+    let t=type.value;
 
-function xpPerTask() {
-    return tasks.length ? Math.floor(100 / tasks.length) : 0;
+    if(!n||!c)return;
+
+    data.tasks.push({name:n,total:c,done:0,type:t});
+    name.value=""; count.value="";
+    save(); render();
 }
 
-function xp() {
-    return done.length * xpPerTask();
-}
+function doTask(i){
+    let t=data.tasks[i];
+    if(t.done<t.total){
+        t.done++;
 
-function addTask() {
-    let val = taskInput.value;
-    if (!val) return;
+        if(t.type==="Strength") data.strength++;
+        if(t.type==="Knowledge") data.knowledge++;
+    }
 
-    tasks.push(val);
-    taskInput.value = "";
-    save();
-    render();
-}
-
-function completeTask(i) {
-    if (!done.includes(i)) done.push(i);
-
-    if (xp() >= 100 && streak >= level) {
-        level++;
-        streak = 0;
+    if(xp()>=100 && data.streak>=data.level){
+        data.level++;
+        data.streak=0;
         alert("LEVEL UP");
     }
 
-    save();
-    render();
+    save(); render();
 }
 
-function save() {
-    localStorage.setItem("tasks", JSON.stringify(tasks));
-    localStorage.setItem("done", JSON.stringify(done));
-    localStorage.setItem("level", level);
+function deleteTask(i){
+    if(confirm("Delete task?")){
+        data.tasks.splice(i,1);
+        save(); render();
+    }
 }
 
-function render() {
-    taskList.innerHTML = "";
+function save(){localStorage.data=JSON.stringify(data);}
 
-    tasks.forEach((t, i) => {
-        let completed = done.includes(i);
-
-        taskList.innerHTML += `
+function render(){
+    taskList.innerHTML="";
+    data.tasks.forEach((t,i)=>{
+        taskList.innerHTML+=`
         <div class="task">
-            <span style="${completed ? 'text-decoration:line-through' : ''}">
-                ${t}
-            </span>
-            <button onclick="completeTask(${i})">✔</button>
+            ${t.name} [${t.done}/${t.total}]
+            <div>
+            <button onclick="doTask(${i})">+</button>
+            <button onclick="deleteTask(${i})">X</button>
+            </div>
         </div>`;
     });
 
-    document.getElementById("level").innerText = level;
-    document.getElementById("streak").innerText = streak;
+    level.innerText=data.level;
+    rank().toString()
+    document.getElementById("rank").innerText=rank();
+    streak.innerText=data.streak;
+    xp.innerText=Math.floor(xp());
 
-    let percent = xp();
-    document.getElementById("xpBar").style.width = percent + "%";
+    xpBar.style.width=xp()+"%";
+
+    str.innerText=data.strength;
+    document.getElementById("int").innerText=data.knowledge;
+    disc.innerText=data.discipline;
+
+    renderGrid();
 }
 
+function renderGrid(){
+    grid.innerHTML="";
+    for(let i=0;i<365;i++){
+        let key=i;
+        let box=document.createElement("div");
+        box.className="box "+(data.grid[key]?"red":"");
+        grid.appendChild(box);
+    }
+}
+
+function timer(){
+    let now=new Date();
+    let end=new Date();
+    end.setHours(24,0,0,0);
+    let d=end-now;
+
+    let h=Math.floor(d/1000/60/60);
+    let m=Math.floor(d/1000/60)%60;
+    let s=Math.floor(d/1000)%60;
+
+    document.getElementById("timer").innerText=`${h}:${m}:${s}`;
+}
+
+setInterval(timer,1000);
+
+newDay();
 render();
 </script>
-
 </body>
 </html>
