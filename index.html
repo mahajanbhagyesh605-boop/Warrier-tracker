@@ -8,7 +8,7 @@
 body {
     margin: 0;
     font-family: 'Segoe UI', sans-serif;
-    background: #04070d;
+    background: #05070d;
     color: #00aaff;
 }
 
@@ -21,9 +21,11 @@ body {
 .bar {
     height: 10px;
     border: 1px solid #00aaff;
-    margin: 10px 0;
 }
-.fill { height:100%; background:#00aaff; }
+.fill {
+    height: 100%;
+    background: #00aaff;
+}
 
 .card {
     border: 1px solid #00aaff33;
@@ -63,9 +65,6 @@ button {
     padding-top: 100%;
     background: #111;
 }
-
-.red { background: #ff4444; }
-
 </style>
 </head>
 
@@ -77,6 +76,7 @@ button {
 
 <div class="bar"><div id="xpBar" class="fill"></div></div>
 <p>XP: <span id="xp"></span>/100</p>
+
 <p>Streak: <span id="streak"></span></p>
 <p>Timer: <span id="timer"></span></p>
 
@@ -85,6 +85,7 @@ button {
 <p>Strength: <span id="str"></span></p>
 <p>Knowledge: <span id="int"></span></p>
 <p>Discipline: <span id="disc"></span></p>
+<p>Maturity: <span id="mat"></span></p>
 </div>
 
 <div class="card">
@@ -113,42 +114,56 @@ let data = JSON.parse(localStorage.data || "{}");
 if (!data.level) {
     data = {
         level:1, streak:0,
-        strength:0, knowledge:0, discipline:0,
+        strength:0, knowledge:0,
+        discipline:0, maturity:0,
         tasks:[],
         grid:{},
         lastDate:new Date().toDateString()
     };
 }
 
-function rank() {
-    let l=data.level;
-    if(l<=5)return"E"; if(l<=10)return"D";
-    if(l<=20)return"C"; if(l<=35)return"B";
-    if(l<=50)return"A"; return"S";
+function getDayOfYear(date){
+    let start=new Date(date.getFullYear(),0,0);
+    let diff=date-start;
+    return Math.floor(diff/(1000*60*60*24));
 }
 
-function xpPerTask(){return data.tasks.length?100/data.tasks.length:0;}
+function rank(){
+    let l=data.level;
+    if(l<=5)return"E";
+    if(l<=10)return"D";
+    if(l<=20)return"C";
+    if(l<=35)return"B";
+    if(l<=50)return"A";
+    return"S";
+}
+
+function xpPerTask(){
+    return data.tasks.length?100/data.tasks.length:0;
+}
 
 function xp(){
-    return data.tasks.filter(t=>t.done>=t.total).length * xpPerTask();
+    let completed=data.tasks.filter(t=>t.done>=t.total).length;
+    return completed*xpPerTask();
 }
 
 function newDay(){
     let today=new Date().toDateString();
+
     if(today!==data.lastDate){
 
-        let day=new Date().getDay();
-        let key=new Date().getFullYear()+"-"+new Date().getDate();
+        let dayIndex=getDayOfYear(new Date());
 
         let allDone=data.tasks.length && data.tasks.every(t=>t.done>=t.total);
 
         if(allDone){
             data.streak++;
             data.discipline++;
-            data.grid[key]=true;
+            data.maturity++;
+            data.grid[dayIndex]=true; // green
         } else {
             data.streak=0;
-            data.grid[key]=false;
+            data.grid[dayIndex]=false; // red
         }
 
         data.tasks.forEach(t=>t.done=0);
@@ -171,6 +186,7 @@ function addTask(){
 
 function doTask(i){
     let t=data.tasks[i];
+
     if(t.done<t.total){
         t.done++;
 
@@ -194,10 +210,13 @@ function deleteTask(i){
     }
 }
 
-function save(){localStorage.data=JSON.stringify(data);}
+function save(){
+    localStorage.data=JSON.stringify(data);
+}
 
 function render(){
     taskList.innerHTML="";
+
     data.tasks.forEach((t,i)=>{
         taskList.innerHTML+=`
         <div class="task">
@@ -210,26 +229,43 @@ function render(){
     });
 
     level.innerText=data.level;
-    rank().toString()
     document.getElementById("rank").innerText=rank();
     streak.innerText=data.streak;
     xp.innerText=Math.floor(xp());
-
     xpBar.style.width=xp()+"%";
 
     str.innerText=data.strength;
     document.getElementById("int").innerText=data.knowledge;
     disc.innerText=data.discipline;
+    mat.innerText=data.maturity;
 
     renderGrid();
 }
 
 function renderGrid(){
     grid.innerHTML="";
-    for(let i=0;i<365;i++){
-        let key=i;
+
+    let today=new Date();
+    let todayIndex=getDayOfYear(today);
+
+    for(let i=1;i<=365;i++){
         let box=document.createElement("div");
-        box.className="box "+(data.grid[key]?"red":"");
+        box.classList.add("box");
+
+        if(i < todayIndex){
+            if(data.grid[i] === true){
+                box.style.background = "#00ff88"; // green
+            } else {
+                box.style.background = "#ff4444"; // red
+            }
+        }
+        else if(i === todayIndex){
+            box.style.background = "#00aaff"; // today
+        }
+        else{
+            box.style.background = "#111"; // future
+        }
+
         grid.appendChild(box);
     }
 }
@@ -238,6 +274,7 @@ function timer(){
     let now=new Date();
     let end=new Date();
     end.setHours(24,0,0,0);
+
     let d=end-now;
 
     let h=Math.floor(d/1000/60/60);
@@ -252,5 +289,6 @@ setInterval(timer,1000);
 newDay();
 render();
 </script>
+
 </body>
 </html>
