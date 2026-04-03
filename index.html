@@ -6,65 +6,24 @@
 
 <style>
 body {
-    margin: 0;
-    font-family: 'Segoe UI', sans-serif;
-    background: #05070d;
-    color: #00aaff;
+    margin:0;
+    font-family:sans-serif;
+    background:#05070d;
+    color:#00aaff;
 }
-
-.container {
-    max-width: 500px;
-    margin: auto;
-    padding: 15px;
+.container {max-width:500px;margin:auto;padding:15px;}
+.bar {height:10px;border:1px solid #00aaff;}
+.fill {height:100%;background:#00aaff;}
+.card {border:1px solid #00aaff33;padding:10px;margin-top:15px;}
+.task {display:flex;justify-content:space-between;margin:8px 0;}
+input,select,button {
+    background:transparent;
+    border:1px solid #00aaff;
+    color:white;
+    padding:5px;
 }
-
-.bar {
-    height: 10px;
-    border: 1px solid #00aaff;
-}
-.fill {
-    height: 100%;
-    background: #00aaff;
-}
-
-.card {
-    border: 1px solid #00aaff33;
-    padding: 15px;
-    border-radius: 10px;
-    margin-top: 15px;
-}
-
-.task {
-    display: flex;
-    justify-content: space-between;
-    margin: 10px 0;
-}
-
-input, select {
-    background: transparent;
-    border: 1px solid #00aaff;
-    color: white;
-    padding: 5px;
-}
-
-button {
-    border: 1px solid #00aaff;
-    background: transparent;
-    color: #00aaff;
-    padding: 5px;
-}
-
-.grid {
-    display: grid;
-    grid-template-columns: repeat(20, 1fr);
-    gap: 3px;
-}
-
-.box {
-    width: 100%;
-    padding-top: 100%;
-    background: #111;
-}
+.grid {display:grid;grid-template-columns:repeat(20,1fr);gap:3px;}
+.box {width:100%;padding-top:100%;background:#111;}
 </style>
 </head>
 
@@ -90,13 +49,13 @@ button {
 
 <div class="card">
 <h3>Add Task</h3>
-<input id="name" placeholder="Task">
-<input id="count" type="number" placeholder="Target">
-<select id="type">
-<option>Strength</option>
-<option>Knowledge</option>
+<input id="taskName" placeholder="Task">
+<input id="taskCount" type="number" placeholder="Target">
+<select id="taskType">
+<option value="Strength">Strength</option>
+<option value="Knowledge">Knowledge</option>
 </select>
-<button onclick="addTask()">Add</button>
+<button id="addBtn">Add</button>
 </div>
 
 <div class="card" id="taskList"></div>
@@ -109,6 +68,11 @@ button {
 </div>
 
 <script>
+const taskName = document.getElementById("taskName");
+const taskCount = document.getElementById("taskCount");
+const taskType = document.getElementById("taskType");
+const addBtn = document.getElementById("addBtn");
+
 let data = JSON.parse(localStorage.data || "{}");
 
 if (!data.level) {
@@ -124,8 +88,7 @@ if (!data.level) {
 
 function getDayOfYear(date){
     let start=new Date(date.getFullYear(),0,0);
-    let diff=date-start;
-    return Math.floor(diff/(1000*60*60*24));
+    return Math.floor((date-start)/(1000*60*60*24));
 }
 
 function rank(){
@@ -151,7 +114,6 @@ function newDay(){
     let today=new Date().toDateString();
 
     if(today!==data.lastDate){
-
         let dayIndex=getDayOfYear(new Date());
 
         let allDone=data.tasks.length && data.tasks.every(t=>t.done>=t.total);
@@ -160,10 +122,10 @@ function newDay(){
             data.streak++;
             data.discipline++;
             data.maturity++;
-            data.grid[dayIndex]=true; // green
+            data.grid[dayIndex]=true;
         } else {
             data.streak=0;
-            data.grid[dayIndex]=false; // red
+            data.grid[dayIndex]=false;
         }
 
         data.tasks.forEach(t=>t.done=0);
@@ -173,21 +135,27 @@ function newDay(){
 }
 
 function addTask(){
-    let n=name.value;
-    let c=+count.value;
-    let t=type.value;
+    let n = taskName.value.trim();
+    let c = parseInt(taskCount.value);
+    let t = taskType.value;
 
-    if(!n||!c)return;
+    if(!n || !c) return;
 
     data.tasks.push({name:n,total:c,done:0,type:t});
-    name.value=""; count.value="";
-    save(); render();
+
+    taskName.value="";
+    taskCount.value="";
+
+    save();
+    render();
 }
+
+addBtn.addEventListener("click", addTask);
 
 function doTask(i){
     let t=data.tasks[i];
 
-    if(t.done<t.total){
+    if(t.done < t.total){
         t.done++;
 
         if(t.type==="Strength") data.strength++;
@@ -197,16 +165,18 @@ function doTask(i){
     if(xp()>=100 && data.streak>=data.level){
         data.level++;
         data.streak=0;
-        alert("LEVEL UP");
+        alert("⚔️ LEVEL UP ⚔️");
     }
 
-    save(); render();
+    save();
+    render();
 }
 
 function deleteTask(i){
     if(confirm("Delete task?")){
         data.tasks.splice(i,1);
-        save(); render();
+        save();
+        render();
     }
 }
 
@@ -215,6 +185,7 @@ function save(){
 }
 
 function render(){
+    const taskList=document.getElementById("taskList");
     taskList.innerHTML="";
 
     data.tasks.forEach((t,i)=>{
@@ -228,42 +199,34 @@ function render(){
         </div>`;
     });
 
-    level.innerText=data.level;
+    document.getElementById("level").innerText=data.level;
     document.getElementById("rank").innerText=rank();
-    streak.innerText=data.streak;
-    xp.innerText=Math.floor(xp());
-    xpBar.style.width=xp()+"%";
+    document.getElementById("streak").innerText=data.streak;
+    document.getElementById("xp").innerText=Math.floor(xp());
+    document.getElementById("xpBar").style.width=xp()+"%";
 
-    str.innerText=data.strength;
+    document.getElementById("str").innerText=data.strength;
     document.getElementById("int").innerText=data.knowledge;
-    disc.innerText=data.discipline;
-    mat.innerText=data.maturity;
+    document.getElementById("disc").innerText=data.discipline;
+    document.getElementById("mat").innerText=data.maturity;
 
     renderGrid();
 }
 
 function renderGrid(){
+    let grid=document.getElementById("grid");
     grid.innerHTML="";
 
-    let today=new Date();
-    let todayIndex=getDayOfYear(today);
+    let todayIndex=getDayOfYear(new Date());
 
     for(let i=1;i<=365;i++){
         let box=document.createElement("div");
-        box.classList.add("box");
+        box.className="box";
 
-        if(i < todayIndex){
-            if(data.grid[i] === true){
-                box.style.background = "#00ff88"; // green
-            } else {
-                box.style.background = "#ff4444"; // red
-            }
-        }
-        else if(i === todayIndex){
-            box.style.background = "#00aaff"; // today
-        }
-        else{
-            box.style.background = "#111"; // future
+        if(i<todayIndex){
+            box.style.background = data.grid[i] ? "#00ff88" : "#ff4444";
+        } else if(i===todayIndex){
+            box.style.background="#00aaff";
         }
 
         grid.appendChild(box);
@@ -289,6 +252,5 @@ setInterval(timer,1000);
 newDay();
 render();
 </script>
-
 </body>
 </html>
